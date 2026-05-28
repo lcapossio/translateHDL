@@ -35,15 +35,26 @@ interface:
 # ---- Layer 2: formal sequential equivalence checking (the primary proof) -----
 formal:
   enabled: true
-  engine: yosys              # yosys (built-in equiv_induct) | eqy (partitioned)
+  engine: yosys              # yosys (built-in equiv_induct); eqy = experimental/untested
   induct_depth: 20           # equiv_induct -seq depth
+  bounded_depth: 0           # >0: if induction can't close, run an N-cycle miter
+                             #     check -> BOUNDED (proof limitation) vs FAIL (real bug)
   modules:
     - name: mymod
-      # Prove every configuration that is actually used:
+      # Prove every configuration that is actually used (same params both sides):
       param_sets:
         - {}                 # default params
         # - {WIDTH: 16, MODE: 1}
-      # wrapper: formal/mymod_iface.v   # optional, for record-flattened ports
+
+    # Record-flattened interface? Use a wrapper in the GOLDEN side's language
+    # (see rules/interface_contract.md). Example:
+    # - name: mymod
+    #   golden_top: mymod_flat        # synth the wrapper, not the record-port entity
+    #   candidate_top: mymod
+    #   wrapper: mymod_flat.vhd       # VHDL wrapper for a VHDL golden (NOT .v)
+    #   configs:                      # per-side params (e.g. VHDL generic vs Verilog param)
+    #     - golden: {reset_time: 640}
+    #       candidate: {RESET_TIME: 640}
 
 # ---- Layer 3: simulation parity (covers what formal can't) -------------------
 simulation:

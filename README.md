@@ -29,8 +29,8 @@ proof on top of the simulation checks.
 python scripts/parity.py path/to/parity.yml --strict
 ```
 
-Verdict exit codes: `0` PASS · `1` FAIL (divergence) · `77` INCOMPLETE
-(a tool was missing, so the proof isn't complete).
+Verdict exit codes: `0` PASS · `1` FAIL (divergence) · `77` BOUNDED
+(bounded-equivalent, not fully proven) or INCOMPLETE (a tool was missing).
 
 ## The parity ladder
 
@@ -43,10 +43,14 @@ Verdict exit codes: `0` PASS · `1` FAIL (divergence) · `77` INCOMPLETE
 | L3b waveform | normalized VCDs of observables agree |
 | L4 synth | matched cell/wire/mem counts (sanity, not proof) |
 
-**Certainty:** L2 PASS means *proven equivalent*. The other layers are the safety
+**Certainty:** L2 PASS means *formally proven equivalent* — a closed
+`equiv_induct` proof is unbounded, not a sample. **L2 BOUNDED** means induction
+didn't close but no counterexample was found within `bounded_depth` cycles
+(strong evidence, not a full proof — usually an encoding/reachability limit, see
+[examples/spwlink](examples/spwlink/parity.yml)). The other layers are the safety
 net and the only evidence for code formal can't reach (testbenches,
 non-synthesizable constructs). Missing tools yield SKIP, never a false PASS;
-`--strict` makes any SKIP a failure (use it in CI).
+`--strict` makes BOUNDED and SKIP failures (use it in CI).
 
 ## Repository layout
 
