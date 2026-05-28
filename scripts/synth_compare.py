@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 
 from _common import (FAIL, PASS, LayerResult, ToolMissing, cli_main, have,
-                     load_manifest, manifest_root, resolve_sources, run_capture, tool)
+                     load_manifest, manifest_root, resolve_sources, run_output, tool)
 import languages
 
 
@@ -29,7 +29,13 @@ def _stats(root: Path, side: dict, params: dict, tmp: Path, tag: str) -> dict:
     stats_path = tmp / f"{tag}.json"
     script = "\n".join([*read_cmds, "proc", "memory", "opt",
                         f"tee -o {stats_path.as_posix()} stat -json"])
-    run_capture([tool("yosys"), "-q", "-"], root, input_text=script + "\n")
+    # Decide on output, not exit code (yowasp-yosys may exit 0 on error): if
+    # synth errored, refuse to report bogus stats.
+    _, out = run_output([tool("yosys"), "-q", "-"], root, input_text=script + "\n")
+    if "ERROR" in out or not stats_path.exists():
+        tail = next((ln.strip() for ln in reversed(out.splitlines()) if "ERROR" in ln),
+                    "no stats produced")
+        raise RuntimeError(f"yosys synth failed for {tag}: {tail}")
     data = json.loads(stats_path.read_text(encoding="utf-8"))
     top = next(iter(data.get("modules", {}).values()), {})
     return {"cells": top.get("num_cells", 0), "wires": top.get("num_wires", 0),

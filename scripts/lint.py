@@ -12,18 +12,30 @@ such as multi-driven nets. Missing tools yield SKIP, never a false PASS.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from _common import (FAIL, PASS, SKIP, LayerResult, ToolMissing, cli_main,
-                     have, load_manifest, manifest_root, resolve_sources, run, tool)
+                     have, load_manifest, manifest_root, resolve_sources,
+                     run_output, tool)
 import languages
 
 
-def _yosys_check(root: Path, top: str, sources: list[str], params: dict | None) -> None:
+def _yosys_check(root: Path, top: str, sources: list[str], params: dict | None) -> tuple[bool, str]:
+    # Decide on OUTPUT, not exit code: yowasp-yosys exits 0 even when
+    # `check -assert` reports problems (e.g. multiple conflicting drivers), so an
+    # exit-code-only check could pass a structurally broken design. `check`
+    # prints "Found and reported N problems."; we parse N.
     cmds = ["read_verilog " + " ".join(sources)]
     chparam = "".join(f" -chparam {k} {int(v)}" for k, v in (params or {}).items())
-    cmds += [f"hierarchy -check -top {top}{chparam}", "proc", "check -assert"]
-    run([tool("yosys"), "-q", "-"], root, input_text="\n".join(cmds) + "\n")
+    cmds += [f"hierarchy -check -top {top}{chparam}", "proc", "check"]
+    _, out = run_output([tool("yosys"), "-"], root, input_text="\n".join(cmds) + "\n")
+    m = re.search(r"Found and reported (\d+) problems", out)
+    if m:
+        n = int(m.group(1))
+        return (n == 0), ("" if n == 0 else f"{n} structural problem(s) (e.g. multi-driver)")
+    tail = next((ln.strip() for ln in reversed(out.splitlines()) if "ERROR" in ln), "")
+    return False, f"yosys check did not complete{(' — ' + tail) if tail else ''}"
 
 
 def _lint_side(root: Path, side: dict, res: LayerResult, label: str) -> None:
@@ -40,8 +52,8 @@ def _lint_side(root: Path, side: dict, res: LayerResult, label: str) -> None:
     if side["language"] == "verilog":
         if have("yosys"):
             try:
-                _yosys_check(root, side["top"], sources, side.get("params"))
-                res.add(f"{label}: yosys structural check", PASS)
+                ok, detail = _yosys_check(root, side["top"], sources, side.get("params"))
+                res.add(f"{label}: yosys structural check", PASS if ok else FAIL, detail)
             except Exception as exc:  # noqa: BLE001 - report any structural failure
                 res.add(f"{label}: yosys structural check", FAIL, str(exc))
         else:
