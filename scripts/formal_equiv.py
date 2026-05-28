@@ -32,11 +32,13 @@ precisely so this layer stays push-button.
 
 from __future__ import annotations
 
+import re
 import tempfile
 from pathlib import Path
 
 from _common import (FAIL, PASS, SKIP, LayerResult, ToolMissing, cli_main, have,
-                     load_manifest, manifest_root, resolve_sources, run_capture, tool)
+                     load_manifest, manifest_root, resolve_sources, run_capture,
+                     run_output, tool)
 import languages
 
 
@@ -76,7 +78,7 @@ def _yosys_equiv_script(gold_cmds: list[str], gate_cmds: list[str], top: str,
         "opt -full",
         "equiv_simple",
         f"equiv_induct -seq {induct_depth}",
-        "equiv_status -assert",
+        "equiv_status",
     ]) + "\n"
 
 
@@ -85,13 +87,17 @@ def _prove_yosys(root: Path, man: dict, module: str, params: dict, tmp: Path,
     gold = _read_cmds(root, man["golden"], module, params, tmp, wrapper)
     gate = _read_cmds(root, man["candidate"], module, params, tmp, None)
     script = _yosys_equiv_script(gold, gate, module, induct_depth)
-    try:
-        run_capture([tool("yosys"), "-q", "-"], root, input_text=script)
-    except Exception:  # noqa: BLE001
-        # equiv_status -assert makes yosys exit non-zero when any equiv point is
-        # unproven; that is the authoritative FAIL signal.
-        return FAIL, "equiv_status -assert: unproven point(s) — designs differ"
-    return PASS, "equiv_induct + equiv_status -assert: all points proven"
+    # Decide on OUTPUT, not exit code: equiv_status prints a definitive summary
+    # and some yosys builds (yowasp) do not propagate a non-zero exit on assert
+    # failure, so an exit-code-only check could mistake "not equivalent" for PASS.
+    _, out = run_output([tool("yosys"), "-"], root, input_text=script)
+    if "Equivalence successfully proven" in out:
+        return PASS, "equiv_induct + equiv_status: equivalence successfully proven"
+    m = re.search(r"Found a total of (\d+) unproven", out) or re.search(r"(\d+) are unproven", out)
+    if m:
+        return FAIL, f"equiv_status: {m.group(1)} unproven $equiv cell(s) — designs differ"
+    tail = next((ln for ln in reversed(out.splitlines()) if "ERROR" in ln), "")
+    return FAIL, f"equivalence not established{(' — ' + tail) if tail else ''}"
 
 
 def _prove_eqy(root: Path, man: dict, module: str, params: dict, tmp: Path) -> tuple[str, str]:

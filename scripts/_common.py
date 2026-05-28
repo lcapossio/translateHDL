@@ -132,6 +132,25 @@ def run_capture(cmd: list[str], cwd: Path, *, input_text: str | None = None) -> 
         raise
 
 
+def run_output(cmd: list[str], cwd: Path, *, input_text: str | None = None) -> tuple[int, str]:
+    """Run a command, returning (returncode, combined stdout+stderr) without raising.
+
+    Use when correctness must be decided by parsing the tool's *output* rather
+    than its exit code — some tool builds (notably yowasp-yosys) do not reliably
+    propagate a non-zero exit on an internal assertion failure.
+    """
+    print("+ " + " ".join(str(c) for c in cmd), flush=True)
+    p = subprocess.run(
+        [str(c) for c in cmd],
+        cwd=str(cwd),
+        text=True,
+        input=input_text,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    return p.returncode, (p.stdout or "")
+
+
 def load_manifest(path: str | Path) -> dict:
     data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     if not isinstance(data, dict):

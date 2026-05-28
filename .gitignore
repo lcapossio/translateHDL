@@ -6,6 +6,8 @@ __pycache__/
 work-obj*.cf
 _net_*.v
 _vhdl_netlist_*.v
+_*.ys
+*.log
 .wavecmp_tmp/
 .formal_*/
 .synthcmp_*/
