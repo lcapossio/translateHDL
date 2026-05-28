@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-2.1-or-later
+// SPDX-License-Identifier: MIT
 // Copyright (C) 2026 Leonardo Capossio - bard0 design
 // Reference design for translateHDL self-tests: synchronous up-counter with
 // synchronous reset (reset dominates enable).

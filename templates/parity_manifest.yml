@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-License-Identifier: MIT
 # translateHDL parity manifest TEMPLATE.
 # Copy next to your sources; paths are resolved relative to THIS file.
 # Run:  python /path/to/translateHDL/scripts/parity.py this_manifest.yml --strict

@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: MIT
+# Prove the real spacewire_light spwlink (exchange-level controller): VHDL golden
+# vs Verilog candidate. The VHDL uses record ports; spwlink_flat.vhd is a thin
+# wrapper exposing flat std_logic ports with the Verilog names, so formal SEC
+# (Layer 2) pairs ports by name. See ../../rules/interface_contract.md.
+#
+# L0 defers (record vs flat, no port_map). L1 lints both. L2 is the proof.
+version: 1
+name: spwlink_parity
+description: spacewire_light spwlink VHDL (record ports) vs Verilog (flattened)
+
+golden:
+  language: vhdl
+  std: "08"
+  top: spwlink
+  sources:
+    - ../../external/spacewire_light/rtl/vhdl/spwpkg.vhd
+    - ../../external/spacewire_light/rtl/vhdl/spwlink.vhd
+
+candidate:
+  language: verilog
+  top: spwlink
+  sources:
+    - ../../external/spacewire_light/rtl/verilog/spwlink.v
+
+interface:
+  top: spwlink
+
+formal:
+  enabled: true
+  engine: yosys
+  induct_depth: 16
+  bounded_depth: 40        # if induction can't close, triage via a 40-cycle bounded miter
+  modules:
+    - name: spwlink
+      golden_top: spwlink_flat       # synth the wrapper (flat ports) on the VHDL side
+      candidate_top: spwlink
+      wrapper: spwlink_flat.vhd
+      configs:
+        - golden: {reset_time: 640}      # VHDL generic
+          candidate: {RESET_TIME: 640}   # Verilog parameter (same value)

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-License-Identifier: MIT
 # Worked example: reproduce spacewire_light's VHDL<->Verilog streamtest parity
 # through the generic translateHDL harness.
 #
@@ -18,34 +18,34 @@ golden:
   std: "08"
   top: streamtest_trace_tb
   sources: &vhdl_sources
-    - ../../../spacewire_light/rtl/vhdl/spwpkg.vhd
-    - ../../../spacewire_light/rtl/vhdl/spwlink.vhd
-    - ../../../spacewire_light/rtl/vhdl/spwrecv.vhd
-    - ../../../spacewire_light/rtl/vhdl/spwxmit.vhd
-    - ../../../spacewire_light/rtl/vhdl/spwxmit_fast.vhd
-    - ../../../spacewire_light/rtl/vhdl/spwrecvfront_generic.vhd
-    - ../../../spacewire_light/rtl/vhdl/spwrecvfront_fast.vhd
-    - ../../../spacewire_light/rtl/vhdl/syncdff.vhd
-    - ../../../spacewire_light/rtl/vhdl/spwram.vhd
-    - ../../../spacewire_light/rtl/vhdl/spwstream.vhd
-    - ../../../spacewire_light/rtl/vhdl/streamtest.vhd
-    - ../../../spacewire_light/bench/vhdl/streamtest_trace_tb.vhd
+    - ../../external/spacewire_light/rtl/vhdl/spwpkg.vhd
+    - ../../external/spacewire_light/rtl/vhdl/spwlink.vhd
+    - ../../external/spacewire_light/rtl/vhdl/spwrecv.vhd
+    - ../../external/spacewire_light/rtl/vhdl/spwxmit.vhd
+    - ../../external/spacewire_light/rtl/vhdl/spwxmit_fast.vhd
+    - ../../external/spacewire_light/rtl/vhdl/spwrecvfront_generic.vhd
+    - ../../external/spacewire_light/rtl/vhdl/spwrecvfront_fast.vhd
+    - ../../external/spacewire_light/rtl/vhdl/syncdff.vhd
+    - ../../external/spacewire_light/rtl/vhdl/spwram.vhd
+    - ../../external/spacewire_light/rtl/vhdl/spwstream.vhd
+    - ../../external/spacewire_light/rtl/vhdl/streamtest.vhd
+    - ../../external/spacewire_light/bench/vhdl/streamtest_trace_tb.vhd
 
 candidate:
   language: verilog
   top: streamtest_trace_tb
   sources: &verilog_sources
-    - ../../../spacewire_light/bench/verilog/streamtest_trace_tb.v
-    - ../../../spacewire_light/rtl/verilog/streamtest.v
-    - ../../../spacewire_light/rtl/verilog/syncdff.v
-    - ../../../spacewire_light/rtl/verilog/spwram.v
-    - ../../../spacewire_light/rtl/verilog/spwlink.v
-    - ../../../spacewire_light/rtl/verilog/spwxmit.v
-    - ../../../spacewire_light/rtl/verilog/spwxmit_fast.v
-    - ../../../spacewire_light/rtl/verilog/spwrecv.v
-    - ../../../spacewire_light/rtl/verilog/spwrecvfront_generic.v
-    - ../../../spacewire_light/rtl/verilog/spwrecvfront_fast.v
-    - ../../../spacewire_light/rtl/verilog/spwstream.v
+    - ../../external/spacewire_light/bench/verilog/streamtest_trace_tb.v
+    - ../../external/spacewire_light/rtl/verilog/streamtest.v
+    - ../../external/spacewire_light/rtl/verilog/syncdff.v
+    - ../../external/spacewire_light/rtl/verilog/spwram.v
+    - ../../external/spacewire_light/rtl/verilog/spwlink.v
+    - ../../external/spacewire_light/rtl/verilog/spwxmit.v
+    - ../../external/spacewire_light/rtl/verilog/spwxmit_fast.v
+    - ../../external/spacewire_light/rtl/verilog/spwrecv.v
+    - ../../external/spacewire_light/rtl/verilog/spwrecvfront_generic.v
+    - ../../external/spacewire_light/rtl/verilog/spwrecvfront_fast.v
+    - ../../external/spacewire_light/rtl/verilog/spwstream.v
 
 # Layer 2 formal SEC is intentionally omitted here: spwstream uses VHDL record
 # ports, so it needs a per-module interface wrapper (see

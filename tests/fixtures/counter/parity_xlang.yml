@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-License-Identifier: MIT
 # translateHDL self-test: the real use case - VHDL golden vs Verilog candidate.
 # Requires GHDL (+ Yosys for L2/L4). On an Icarus-only box L1(vhdl)/L2/L3/L4
 # SKIP and the run reports INCOMPLETE; in CI with the full toolchain every

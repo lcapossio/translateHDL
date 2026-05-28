@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-License-Identifier: MIT
 # Copyright (C) 2026 Leonardo Capossio - bard0 design
 # Author: Leonardo Capossio - bard0 design - hello@bard0.com
 """Parity ladder orchestrator.
@@ -24,7 +24,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from _common import EXIT, FAIL, PASS, SKIP, LayerResult, ToolMissing  # noqa: E402
+from _common import BOUNDED, EXIT, FAIL, PASS, SKIP, LayerResult, ToolMissing  # noqa: E402
 import manifest as manifest_mod  # noqa: E402
 import iface_check  # noqa: E402
 import lint  # noqa: E402
@@ -81,9 +81,10 @@ def main() -> int:
 
     print(f"\n{'=' * 70}\n== VERDICT\n{'=' * 70}")
     any_fail = any(r.rollup() == FAIL for _, r in results)
+    any_bounded = any(r.rollup() == BOUNDED for _, r in results)
     any_skip = any(r.rollup() == SKIP for _, r in results)
     for tag, r in results:
-        print(f"  {tag:<4} {r.rollup():<5} {r.layer}")
+        print(f"  {tag:<4} {r.rollup():<7} {r.layer}")
 
     formal = next((r for t, r in results if t == "L2"), None)
     if formal is not None and formal.rollup() == PASS and any(s == PASS for _, s, _ in formal.items):
@@ -92,6 +93,14 @@ def main() -> int:
     if any_fail:
         print("\nRESULT: FAIL - a divergence was found. Translation is NOT equivalent.")
         return EXIT[FAIL]
+    if any_bounded:
+        if strict:
+            print("\nRESULT: FAIL (--strict) - equivalence is only bounded-proven, "
+                  "not fully proven. Use a stronger engine (eqy) to close it.")
+            return EXIT[FAIL]
+        print("\nRESULT: BOUNDED - no divergence found and bounded-equivalent, but a "
+              "module is not fully proven (see L2 detail). Stronger engine needed for full proof.")
+        return EXIT[BOUNDED]
     if any_skip:
         if strict:
             print("\nRESULT: FAIL (--strict) - a layer was skipped (missing tool); "

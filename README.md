@@ -99,5 +99,9 @@ and a `rules/<from>_to_<to>.md` guide; the rest of the ladder is language-neutra
 
 ## License
 
-LGPL-2.1-or-later. Copyright (C) 2026 Leonardo Capossio - bard0 design -
-hello@bard0.com.
+MIT — see [LICENSE](LICENSE). Copyright (c) 2026 Leonardo Capossio - bard0
+design - hello@bard0.com.
+
+The `external/spacewire_light` submodule is third-party code under its own
+license (LGPL-2.1 / GPL-2.0, © Joris van Rantwijk); the MIT license here covers
+only the translateHDL tooling.

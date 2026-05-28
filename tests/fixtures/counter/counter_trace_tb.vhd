@@ -1,4 +1,4 @@
--- SPDX-License-Identifier: LGPL-2.1-or-later
+-- SPDX-License-Identifier: MIT
 -- Copyright (C) 2026 Leonardo Capossio - bard0 design
 -- VHDL twin of counter_trace_tb.v. Must emit byte-identical TRACE lines under
 -- identical stimulus so Layer 3a (trace) and Layer 3b (waveform, via --vcd)

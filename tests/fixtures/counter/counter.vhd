@@ -1,4 +1,4 @@
--- SPDX-License-Identifier: LGPL-2.1-or-later
+-- SPDX-License-Identifier: MIT
 -- Copyright (C) 2026 Leonardo Capossio - bard0 design
 -- VHDL reference equivalent of counter_gold.v, used for the cross-language
 -- self-test. Port names match the Verilog (clk/rst/en/count) so formal SEC

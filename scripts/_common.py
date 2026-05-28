@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-License-Identifier: MIT
 # Copyright (C) 2026 Leonardo Capossio - bard0 design
 # Author: Leonardo Capossio - bard0 design - hello@bard0.com
 """Shared helpers for the translateHDL parity ladder.
@@ -44,8 +44,10 @@ def tool(name: str) -> str:
 PASS = "PASS"
 FAIL = "FAIL"
 SKIP = "SKIP"
+BOUNDED = "BOUNDED"   # equivalent up to a bounded depth, but not fully proven
 
-EXIT = {PASS: 0, FAIL: 1, SKIP: 77}
+# BOUNDED and SKIP both mean "not a full proof, but no divergence found" -> 77.
+EXIT = {PASS: 0, FAIL: 1, SKIP: 77, BOUNDED: 77}
 
 
 class ToolMissing(Exception):
@@ -77,11 +79,11 @@ class LayerResult:
         statuses = {status for _, status, _ in self.items}
         if FAIL in statuses:
             return FAIL
-        if SKIP in statuses and PASS not in statuses:
-            return SKIP
+        if BOUNDED in statuses:
+            # a bounded-only proof anywhere means the layer is not a full proof
+            return BOUNDED
         if SKIP in statuses:
-            # mix of pass and skip -> partial; treat as SKIP so it is never
-            # mistaken for a full proof, but the detail records what passed.
+            # any skip -> partial; never mistaken for a full proof.
             return SKIP
         return PASS
 

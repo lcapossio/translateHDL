@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-2.1-or-later
+// SPDX-License-Identifier: MIT
 // Copyright (C) 2026 Leonardo Capossio - bard0 design
 // Deliberately BROKEN translation: increments by 2 instead of 1. Used to prove
 // the parity ladder actually detects divergence (trace, waveform, and formal

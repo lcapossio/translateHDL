@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-License-Identifier: MIT
 # translateHDL self-test: BROKEN translation (counts by 2). The trace, waveform
 # and formal layers must FAIL — this proves the harness detects divergence.
 version: 1

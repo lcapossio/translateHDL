@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-2.1-or-later
+// SPDX-License-Identifier: MIT
 // Copyright (C) 2026 Leonardo Capossio - bard0 design
 // Deterministic trace/waveform bench for the counter fixture. Drives a fixed
 // stimulus (no randomness), prints TRACE lines for Layer 3a, and honors

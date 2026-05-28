@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-License-Identifier: MIT
 # translateHDL parity CI TEMPLATE. Copy to .github/workflows/parity.yml.
 # OSS CAD Suite bundles iverilog, ghdl, ghdl-yosys-plugin, yosys, eqy and sby,
 # so the WHOLE ladder (including Layer 2 formal SEC) runs here. --strict turns

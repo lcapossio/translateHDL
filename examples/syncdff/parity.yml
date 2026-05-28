@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: MIT
+# Prove the real spacewire_light syncdff (double-FF synchronizer): VHDL golden
+# vs Verilog candidate. Matching interface (clk/rst/di/do), async reset -> formal
+# SEC needs no wrapper. No testbench exists for this leaf, so there is no
+# simulation section; Layer 2 is the proof.
+#
+# Run formal (needs ghdl + yosys together; in this split env see the two-step in
+# the session notes). L0/L1 run on Windows with ghdl on PATH.
+version: 1
+name: syncdff_parity
+description: spacewire_light syncdff VHDL vs Verilog (real leaf module)
+
+golden:
+  language: vhdl
+  std: "08"
+  top: syncdff
+  sources: [../../external/spacewire_light/rtl/vhdl/syncdff.vhd]
+
+candidate:
+  language: verilog
+  top: syncdff
+  sources: [../../external/spacewire_light/rtl/verilog/syncdff.v]
+
+interface:
+  top: syncdff
+
+formal:
+  enabled: true
+  engine: yosys
+  induct_depth: 8
+  modules:
+    - name: syncdff

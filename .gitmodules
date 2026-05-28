@@ -1,0 +1,3 @@
+[submodule "external/spacewire_light"]
+	path = external/spacewire_light
+	url = https://github.com/lcapossio/spacewire_light

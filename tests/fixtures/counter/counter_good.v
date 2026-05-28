@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-2.1-or-later
+// SPDX-License-Identifier: MIT
 // Copyright (C) 2026 Leonardo Capossio - bard0 design
 // Equivalent "translation" of counter_gold.v, written in a different style
 // (explicit next-state two-process form). Behaviorally identical: reset still
