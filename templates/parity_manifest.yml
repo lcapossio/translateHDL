@@ -1,0 +1,87 @@
+# SPDX-License-Identifier: LGPL-2.1-or-later
+# translateHDL parity manifest TEMPLATE.
+# Copy next to your sources; paths are resolved relative to THIS file.
+# Run:  python /path/to/translateHDL/scripts/parity.py this_manifest.yml --strict
+#
+# Sections are optional except `golden` and `candidate`. Omit a layer's section
+# to skip that layer (e.g. no `formal:` -> Layer 2 not run).
+
+version: 1
+name: mydesign_parity
+description: one-line summary of what is being compared
+
+# ---- the two designs ---------------------------------------------------------
+golden:                      # the original / reference implementation
+  language: vhdl             # vhdl | verilog
+  std: "08"                  # vhdl std (93/08) or verilog gen (2001); optional
+  top: mymod                 # entity/module name used for elaboration & SEC
+  sources:
+    - rtl/mymod.vhd
+
+candidate:                   # the translation under test
+  language: verilog
+  top: mymod
+  sources:
+    - rtl/mymod.v
+
+# ---- Layer 0: interface check ------------------------------------------------
+interface:
+  top: mymod
+  # Only needed when port names differ across the two sides (e.g. VHDL records
+  # flattened in Verilog). golden_name: candidate_name
+  # port_map:
+  #   "busi.valid": busi_valid
+
+# ---- Layer 2: formal sequential equivalence checking (the primary proof) -----
+formal:
+  enabled: true
+  engine: yosys              # yosys (built-in equiv_induct) | eqy (partitioned)
+  induct_depth: 20           # equiv_induct -seq depth
+  modules:
+    - name: mymod
+      # Prove every configuration that is actually used:
+      param_sets:
+        - {}                 # default params
+        # - {WIDTH: 16, MODE: 1}
+      # wrapper: formal/mymod_iface.v   # optional, for record-flattened ports
+
+# ---- Layer 3: simulation parity (covers what formal can't) -------------------
+simulation:
+  trace:                     # 3a: exact match of marker lines from matched benches
+    marker: "TRACE "
+    golden:
+      language: vhdl
+      std: "08"
+      top: mymod_trace_tb
+      sources: [rtl/mymod.vhd, bench/mymod_trace_tb.vhd]
+    candidate:
+      language: verilog
+      top: mymod_trace_tb
+      sources: [bench/mymod_trace_tb.v, rtl/mymod.v]
+  waveform:                  # 3b: normalized VCD compare of top-level observables
+    start_ps: 25000          # ignore power-on settling before this time
+    golden:
+      language: vhdl
+      std: "08"
+      top: mymod_trace_tb
+      sources: [rtl/mymod.vhd, bench/mymod_trace_tb.vhd]
+    candidate:
+      language: verilog
+      top: mymod_trace_tb
+      sources: [bench/mymod_trace_tb.v, rtl/mymod.v]
+    signals:                 # logical name: [golden_vcd_path, candidate_vcd_path]
+      clk:  ["mymod_trace_tb.clk", "mymod_trace_tb.clk"]
+      dout: ["mymod_trace_tb.dout", "mymod_trace_tb.dout"]
+  testbenches:               # optional: enforce stimulus-isomorphism of benches
+    - name: mymod_tb
+      class: stimulus-isomorphic
+      stimulus: ["Test 1: reset", "Test 2: overflow"]   # markers required on both
+      golden: {sources: [bench/mymod_tb.vhd]}
+      candidate: {sources: [bench/mymod_tb.v]}
+
+# ---- Layer 4: synthesis resource sanity (not a proof) ------------------------
+synth:
+  enabled: true
+  tolerance_pct: 5.0
+  param_sets:
+    - {}

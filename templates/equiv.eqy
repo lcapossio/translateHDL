@@ -1,0 +1,29 @@
+; SPDX-License-Identifier: LGPL-2.1-or-later
+; translateHDL eqy config TEMPLATE (engine: eqy).
+; Use for large modules where built-in equiv_induct is slow, or when state
+; encodings differ. Run with:  eqy -f equiv.eqy
+; formal_equiv.py can generate this for you; this template documents the shape.
+
+[options]
+depth 20
+
+[gold]
+; Read the GOLDEN design into Yosys. For VHDL, GHDL emits a Verilog netlist:
+;   read_verilog mymod_golden_netlist.v
+; For native Verilog:
+read_verilog rtl/mymod_golden.v
+prep -top mymod
+
+[gate]
+; Read the CANDIDATE (translated) design.
+read_verilog rtl/mymod.v
+prep -top mymod
+
+; Optional explicit port/point correspondence when names differ:
+; [match]
+; gold-match busi_valid busi.valid
+
+[strategy simple]
+use sby
+engine smtbmc
+depth 20

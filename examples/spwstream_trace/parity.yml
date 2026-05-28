@@ -1,0 +1,81 @@
+# SPDX-License-Identifier: LGPL-2.1-or-later
+# Worked example: reproduce spacewire_light's VHDL<->Verilog streamtest parity
+# through the generic translateHDL harness.
+#
+# Expects spacewire_light checked out as a SIBLING of translateHDL:
+#   <parent>/translateHDL/   <parent>/spacewire_light/
+# Paths below are relative to THIS manifest file.
+#
+# Run (needs ghdl + iverilog; add yosys for nothing here - formal is disabled
+# because the record-port modules need an interface wrapper, see notes):
+#   python ../../scripts/parity.py parity.yml
+version: 1
+name: spwstream_trace_parity
+description: spacewire_light streamtest VHDL golden vs Verilog candidate
+
+golden:
+  language: vhdl
+  std: "08"
+  top: streamtest_trace_tb
+  sources: &vhdl_sources
+    - ../../../spacewire_light/rtl/vhdl/spwpkg.vhd
+    - ../../../spacewire_light/rtl/vhdl/spwlink.vhd
+    - ../../../spacewire_light/rtl/vhdl/spwrecv.vhd
+    - ../../../spacewire_light/rtl/vhdl/spwxmit.vhd
+    - ../../../spacewire_light/rtl/vhdl/spwxmit_fast.vhd
+    - ../../../spacewire_light/rtl/vhdl/spwrecvfront_generic.vhd
+    - ../../../spacewire_light/rtl/vhdl/spwrecvfront_fast.vhd
+    - ../../../spacewire_light/rtl/vhdl/syncdff.vhd
+    - ../../../spacewire_light/rtl/vhdl/spwram.vhd
+    - ../../../spacewire_light/rtl/vhdl/spwstream.vhd
+    - ../../../spacewire_light/rtl/vhdl/streamtest.vhd
+    - ../../../spacewire_light/bench/vhdl/streamtest_trace_tb.vhd
+
+candidate:
+  language: verilog
+  top: streamtest_trace_tb
+  sources: &verilog_sources
+    - ../../../spacewire_light/bench/verilog/streamtest_trace_tb.v
+    - ../../../spacewire_light/rtl/verilog/streamtest.v
+    - ../../../spacewire_light/rtl/verilog/syncdff.v
+    - ../../../spacewire_light/rtl/verilog/spwram.v
+    - ../../../spacewire_light/rtl/verilog/spwlink.v
+    - ../../../spacewire_light/rtl/verilog/spwxmit.v
+    - ../../../spacewire_light/rtl/verilog/spwxmit_fast.v
+    - ../../../spacewire_light/rtl/verilog/spwrecv.v
+    - ../../../spacewire_light/rtl/verilog/spwrecvfront_generic.v
+    - ../../../spacewire_light/rtl/verilog/spwrecvfront_fast.v
+    - ../../../spacewire_light/rtl/verilog/spwstream.v
+
+# Layer 2 formal SEC is intentionally omitted here: spwstream uses VHDL record
+# ports, so it needs a per-module interface wrapper (see
+# rules/interface_contract.md). The simulation layers below already mirror
+# spacewire_light's own CI parity checks through the generic harness.
+
+simulation:
+  trace:
+    marker: "TRACE "
+    golden:    {language: vhdl, std: "08", top: streamtest_trace_tb, sources: *vhdl_sources}
+    candidate: {language: verilog, top: streamtest_trace_tb, sources: *verilog_sources}
+  waveform:
+    start_ps: 25000
+    golden:    {language: vhdl, std: "08", top: streamtest_trace_tb, sources: *vhdl_sources}
+    candidate: {language: verilog, top: streamtest_trace_tb, sources: *verilog_sources}
+    signals:
+      clk:        ["streamtest_trace_tb.sysclk",       "streamtest_trace_tb.clk"]
+      rst:        ["streamtest_trace_tb.s_rst",        "streamtest_trace_tb.rst"]
+      loopback:   ["streamtest_trace_tb.s_loopback",   "streamtest_trace_tb.loopback"]
+      linkstart:  ["streamtest_trace_tb.s_linkstart",  "streamtest_trace_tb.linkstart"]
+      autostart:  ["streamtest_trace_tb.s_autostart",  "streamtest_trace_tb.autostart"]
+      linkdisable:["streamtest_trace_tb.s_linkdisable","streamtest_trace_tb.linkdisable"]
+      txdivcnt:   ["streamtest_trace_tb.s_divcnt",     "streamtest_trace_tb.txdivcnt"]
+      nreceived:  ["streamtest_trace_tb.s_nreceived",  "streamtest_trace_tb.nreceived"]
+      linkrun:    ["streamtest_trace_tb.s_linkrun",    "streamtest_trace_tb.linkrun"]
+      linkerror:  ["streamtest_trace_tb.s_linkerror",  "streamtest_trace_tb.linkerror"]
+      gotdata:    ["streamtest_trace_tb.s_gotdata",    "streamtest_trace_tb.gotdata"]
+      dataerror:  ["streamtest_trace_tb.s_dataerror",  "streamtest_trace_tb.dataerror"]
+      tickerror:  ["streamtest_trace_tb.s_tickerror",  "streamtest_trace_tb.tickerror"]
+      spw_di:     ["streamtest_trace_tb.s_spwdi",      "streamtest_trace_tb.spw_di"]
+      spw_si:     ["streamtest_trace_tb.s_spwsi",      "streamtest_trace_tb.spw_si"]
+      spw_do:     ["streamtest_trace_tb.s_spwdo",      "streamtest_trace_tb.spw_do"]
+      spw_so:     ["streamtest_trace_tb.s_spwso",      "streamtest_trace_tb.spw_so"]

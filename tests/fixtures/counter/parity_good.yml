@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: LGPL-2.1-or-later
+# translateHDL self-test: equivalent translation. Every layer should PASS
+# (layers needing yosys/ghdl SKIP cleanly when those tools are absent).
+version: 1
+name: counter_good_parity
+description: counter_gold.v vs an equivalent two-process rewrite
+
+golden:
+  language: verilog
+  top: counter
+  sources: [counter_gold.v]
+
+candidate:
+  language: verilog
+  top: counter
+  sources: [counter_good.v]
+
+interface:
+  top: counter
+
+formal:
+  enabled: true
+  engine: yosys
+  induct_depth: 8
+  modules:
+    - name: counter
+      param_sets:
+        - {WIDTH: 8}
+
+simulation:
+  trace:
+    marker: "TRACE "
+    golden:
+      language: verilog
+      top: counter_trace_tb
+      sources: [counter_trace_tb.v, counter_gold.v]
+    candidate:
+      language: verilog
+      top: counter_trace_tb
+      sources: [counter_trace_tb.v, counter_good.v]
+  waveform:
+    start_ps: 0
+    golden:
+      language: verilog
+      top: counter_trace_tb
+      sources: [counter_trace_tb.v, counter_gold.v]
+    candidate:
+      language: verilog
+      top: counter_trace_tb
+      sources: [counter_trace_tb.v, counter_good.v]
+    signals:
+      clk:   ["counter_trace_tb.clk",   "counter_trace_tb.clk"]
+      rst:   ["counter_trace_tb.rst",   "counter_trace_tb.rst"]
+      en:    ["counter_trace_tb.en",    "counter_trace_tb.en"]
+      count: ["counter_trace_tb.count", "counter_trace_tb.count"]
+
+synth:
+  enabled: true
+  tolerance_pct: 5.0
+  param_sets:
+    - {WIDTH: 8}

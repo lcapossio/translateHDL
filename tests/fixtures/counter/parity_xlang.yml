@@ -1,0 +1,66 @@
+# SPDX-License-Identifier: LGPL-2.1-or-later
+# translateHDL self-test: the real use case - VHDL golden vs Verilog candidate.
+# Requires GHDL (+ Yosys for L2/L4). On an Icarus-only box L1(vhdl)/L2/L3/L4
+# SKIP and the run reports INCOMPLETE; in CI with the full toolchain every
+# layer runs and must PASS.
+version: 1
+name: counter_xlang_parity
+description: VHDL counter.vhd vs Verilog counter_good.v (cross-language)
+
+golden:
+  language: vhdl
+  std: "08"
+  top: counter
+  sources: [counter.vhd]
+
+candidate:
+  language: verilog
+  top: counter
+  sources: [counter_good.v]
+
+interface:
+  top: counter
+
+formal:
+  enabled: true
+  engine: yosys
+  induct_depth: 8
+  modules:
+    - name: counter
+      param_sets:
+        - {WIDTH: 8}
+
+simulation:
+  trace:
+    marker: "TRACE "
+    golden:
+      language: vhdl
+      std: "08"
+      top: counter_trace_tb
+      sources: [counter.vhd, counter_trace_tb.vhd]
+    candidate:
+      language: verilog
+      top: counter_trace_tb
+      sources: [counter_trace_tb.v, counter_good.v]
+  waveform:
+    start_ps: 11000
+    golden:
+      language: vhdl
+      std: "08"
+      top: counter_trace_tb
+      sources: [counter.vhd, counter_trace_tb.vhd]
+    candidate:
+      language: verilog
+      top: counter_trace_tb
+      sources: [counter_trace_tb.v, counter_good.v]
+    signals:
+      clk:   ["counter_trace_tb.clk",   "counter_trace_tb.clk"]
+      rst:   ["counter_trace_tb.rst",   "counter_trace_tb.rst"]
+      en:    ["counter_trace_tb.en",    "counter_trace_tb.en"]
+      count: ["counter_trace_tb.count", "counter_trace_tb.count"]
+
+synth:
+  enabled: true
+  tolerance_pct: 10.0
+  param_sets:
+    - {WIDTH: 8}

@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: LGPL-2.1-or-later
+# translateHDL self-test: BROKEN translation (counts by 2). The trace, waveform
+# and formal layers must FAIL — this proves the harness detects divergence.
+version: 1
+name: counter_bad_parity
+description: counter_gold.v vs counter_bad.v (increment-by-2 bug)
+
+golden:
+  language: verilog
+  top: counter
+  sources: [counter_gold.v]
+
+candidate:
+  language: verilog
+  top: counter
+  sources: [counter_bad.v]
+
+interface:
+  top: counter
+
+formal:
+  enabled: true
+  engine: yosys
+  induct_depth: 8
+  modules:
+    - name: counter
+      param_sets:
+        - {WIDTH: 8}
+
+simulation:
+  trace:
+    marker: "TRACE "
+    golden:
+      language: verilog
+      top: counter_trace_tb
+      sources: [counter_trace_tb.v, counter_gold.v]
+    candidate:
+      language: verilog
+      top: counter_trace_tb
+      sources: [counter_trace_tb.v, counter_bad.v]
+  waveform:
+    start_ps: 0
+    golden:
+      language: verilog
+      top: counter_trace_tb
+      sources: [counter_trace_tb.v, counter_gold.v]
+    candidate:
+      language: verilog
+      top: counter_trace_tb
+      sources: [counter_trace_tb.v, counter_bad.v]
+    signals:
+      clk:   ["counter_trace_tb.clk",   "counter_trace_tb.clk"]
+      rst:   ["counter_trace_tb.rst",   "counter_trace_tb.rst"]
+      en:    ["counter_trace_tb.en",    "counter_trace_tb.en"]
+      count: ["counter_trace_tb.count", "counter_trace_tb.count"]

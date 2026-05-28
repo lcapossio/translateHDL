@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.vvp
+*.vcd
+work-obj*.cf
+_net_*.v
+_vhdl_netlist_*.v
+.wavecmp_tmp/
+.formal_*/
+.synthcmp_*/
+.spw_synth_*/
+*.eqy.dir/
+eqy_*/
