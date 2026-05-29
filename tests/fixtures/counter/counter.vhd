@@ -1,5 +1,6 @@
 -- SPDX-License-Identifier: MIT
 -- Copyright (C) 2026 Leonardo Capossio - bard0 design
+-- Author: Leonardo Capossio - bard0 design - hello@bard0.com
 -- VHDL reference equivalent of counter_gold.v, used for the cross-language
 -- self-test. Port names match the Verilog (clk/rst/en/count) so formal SEC
 -- needs no interface wrapper.

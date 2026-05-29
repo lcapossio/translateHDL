@@ -1,5 +1,6 @@
 -- SPDX-License-Identifier: MIT
 -- Copyright (c) 2026 Leonardo Capossio - bard0 design
+-- Author: Leonardo Capossio - bard0 design - hello@bard0.com
 --
 -- Interface wrapper for formal SEC of spacewire_light spwlink.
 -- The VHDL spwlink uses record ports (spw_link_in_type, ...); the Verilog

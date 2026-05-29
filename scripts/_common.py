@@ -31,7 +31,7 @@ import yaml
 
 # Tool binaries can be overridden by environment variable, so installs with
 # non-standard names work without code changes (e.g. YoWASP: YOSYS=yowasp-yosys,
-# GHDL=yowasp-ghdl; or a pinned path: GHDL=/c/ghdl/bin/ghdl).
+# GHDL=yowasp-ghdl; or a pinned path: GHDL=/path/to/ghdl).
 _TOOL_ENV = {
     "yosys": "YOSYS", "ghdl": "GHDL", "iverilog": "IVERILOG",
     "vvp": "VVP", "eqy": "EQY",

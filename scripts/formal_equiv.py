@@ -36,7 +36,7 @@ import re
 import tempfile
 from pathlib import Path
 
-from _common import (BOUNDED, FAIL, PASS, SKIP, LayerResult, ToolMissing, cli_main,
+from _common import (BOUNDED, FAIL, PASS, LayerResult, ToolMissing, cli_main,
                      have, load_manifest, manifest_root, resolve_sources, run_capture,
                      run_output, tool)
 import languages

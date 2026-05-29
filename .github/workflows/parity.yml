@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: MIT
-# Copyright (C) 2026 Leonardo Capossio - bard0 design
+# Copyright (c) 2026 Leonardo Capossio - bard0 design
+# Author: Leonardo Capossio - bard0 design - hello@bard0.com
 # Full parity ladder for the translateHDL self-tests. OSS CAD Suite provides
 # iverilog, ghdl, ghdl-yosys-plugin, yosys, eqy and sby, so Layer 2 formal SEC
-# runs here. --strict makes a skipped layer a hard failure.
+# runs here. --strict makes a skipped/bounded layer a hard failure.
 
 name: parity
 
@@ -20,13 +21,16 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install PyYAML + pytest
-        run: pip install pyyaml pytest
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      - name: Lint (ruff)
+        run: ruff check scripts tests
 
       - name: Install OSS CAD Suite (yosys, ghdl, eqy, sby, iverilog)
         uses: YosysHQ/setup-oss-cad-suite@v3
 
-      - name: Harness self-tests
+      - name: Harness self-tests (includes the broken-fixture negative test)
         run: pytest tests/ -v
 
       - name: Prove same-language fixture (strict)
@@ -34,11 +38,3 @@ jobs:
 
       - name: Prove cross-language fixture (strict)
         run: python scripts/parity.py tests/fixtures/counter/parity_xlang.yml --strict
-
-      - name: Broken fixture must FAIL (negative test)
-        run: |
-          if python scripts/parity.py tests/fixtures/counter/parity_bad.yml; then
-            echo "ERROR: broken fixture unexpectedly passed parity"; exit 1
-          else
-            echo "OK: parity correctly rejected the broken translation"
-          fi

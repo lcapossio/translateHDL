@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (C) 2026 Leonardo Capossio - bard0 design
+// Author: Leonardo Capossio - bard0 design - hello@bard0.com
 // Deliberately BROKEN translation: increments by 2 instead of 1. Used to prove
 // the parity ladder actually detects divergence (trace, waveform, and formal
 // SEC must all FAIL on this). Do not "fix" it.

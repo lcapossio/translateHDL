@@ -1,5 +1,6 @@
 -- SPDX-License-Identifier: MIT
 -- Copyright (C) 2026 Leonardo Capossio - bard0 design
+-- Author: Leonardo Capossio - bard0 design - hello@bard0.com
 -- VHDL twin of counter_trace_tb.v. Must emit byte-identical TRACE lines under
 -- identical stimulus so Layer 3a (trace) and Layer 3b (waveform, via --vcd)
 -- match the Verilog candidate. Clock: 10 ns period, sample 1 ns after each

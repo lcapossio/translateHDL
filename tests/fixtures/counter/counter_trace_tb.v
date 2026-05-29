@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (C) 2026 Leonardo Capossio - bard0 design
+// Author: Leonardo Capossio - bard0 design - hello@bard0.com
 // Deterministic trace/waveform bench for the counter fixture. Drives a fixed
 // stimulus (no randomness), prints TRACE lines for Layer 3a, and honors
 // +WAVE=<path> to dump a VCD for Layer 3b. Instantiates module `counter`,

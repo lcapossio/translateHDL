@@ -81,5 +81,14 @@ def test_bad_formal_never_passes():
     assert _run(formal_equiv.prove, BAD) in (FAIL, SKIP)
 
 
+def test_orchestrator_rejects_broken_fixture():
+    # End-to-end: the orchestrator must exit 1 (FAIL) on the broken fixture
+    # (the trace/waveform layers catch the divergence even without yosys).
+    import subprocess
+    r = subprocess.run([sys.executable, str(ROOT / "scripts" / "parity.py"), BAD],
+                       capture_output=True, text=True)
+    assert r.returncode == 1, f"expected FAIL exit 1, got {r.returncode}\n{r.stdout}\n{r.stderr}"
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([str(Path(__file__)), "-v"]))

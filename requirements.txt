@@ -1,0 +1,4 @@
+# translateHDL Python dependencies (HDL tools come from PATH / OSS CAD Suite).
+pyyaml>=6.0
+pytest>=8.0
+ruff>=0.5

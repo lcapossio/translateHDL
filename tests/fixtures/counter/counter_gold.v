@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (C) 2026 Leonardo Capossio - bard0 design
+// Author: Leonardo Capossio - bard0 design - hello@bard0.com
 // Reference design for translateHDL self-tests: synchronous up-counter with
 // synchronous reset (reset dominates enable).
 `timescale 1ns / 1ps

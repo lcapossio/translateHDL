@@ -12,6 +12,34 @@ done.
 This repo is both a standalone toolset and a Claude Code skill (see
 [SKILL.md](SKILL.md)).
 
+## Index
+
+- [Why](#why)
+- [Quickstart](#quickstart)
+- [Features](#features)
+- [The parity ladder](#the-parity-ladder)
+- [Repository layout](#repository-layout)
+- [Self-tests](#self-tests)
+- [Toolchain](#toolchain)
+- [Worked example: spacewire_light](#worked-example-spacewire_light)
+- [Extending to other languages](#extending-to-other-languages)
+- [Author](#author)
+- [License](#license)
+
+## Features
+
+- **VHDL ↔ Verilog-2001** translation guidance (faithful, state-preserving;
+  pluggable to more languages via a small registry).
+- **5-layer parity ladder**: interface check, lint, **formal sequential
+  equivalence (Yosys)**, deterministic trace compare, normalized VCD waveform
+  compare, synth-stat sanity.
+- **Honest verdicts**: PASS (full unbounded proof) / FAIL / **BOUNDED**
+  (bounded-equivalent, proof limitation) / INCOMPLETE (tool missing). Decided by
+  parsing tool *output*, not exit codes.
+- **Record-port support** via a golden-side wrapper (proven on spwlink).
+- **Tool-skip aware** (exit `77`), `--strict` for CI, manifest-driven, OS-agnostic.
+- **GitHub Actions CI** running the full ladder on OSS CAD Suite.
+
 ## Why
 
 Hand-translating RTL (the way [spacewire_light](#worked-example-spacewire_light)
@@ -69,9 +97,13 @@ examples/                worked example against spacewire_light
 
 ## Self-tests
 
+From a clean checkout (Python 3.12+):
+
 ```sh
+pip install -r requirements.txt
 pytest tests/            # proves the harness PASSes equivalent designs
                          # and FAILs a deliberately broken one
+ruff check scripts tests # python lint (also run in CI)
 ```
 
 The `tests/fixtures/counter/` fixture ships an equivalent translation, a
@@ -89,17 +121,28 @@ installing the suite.
 
 ## Worked example: spacewire_light
 
-[examples/spwstream_trace/parity.yml](examples/spwstream_trace/parity.yml)
-reproduces spacewire_light's VHDL↔Verilog `streamtest` trace + waveform parity
-through the generic harness (expects `spacewire_light` checked out beside this
-repo). It demonstrates the simulation layers on a real core; formal SEC for its
-record-port modules needs an interface wrapper, described in
-[rules/interface_contract.md](rules/interface_contract.md).
+spacewire_light is included as a submodule under `external/` — fetch it with:
+
+```sh
+git submodule update --init
+```
+
+Real-module results (see [examples/](examples/README.md)):
+- **`syncdff`** — fully **formally proven** VHDL ≡ Verilog ([examples/syncdff](examples/syncdff/parity.yml)).
+- **`spwlink`** — record ports proven via a golden-side wrapper; induction proves
+  42/49 cells, a 40-cycle bounded miter finds no counterexample → **BOUNDED**
+  ([examples/spwlink](examples/spwlink/parity.yml)).
+- **`spwstream_trace`** — deterministic trace + normalized VCD waveform parity
+  ([examples/spwstream_trace](examples/spwstream_trace/parity.yml)).
 
 ## Extending to other languages
 
 Add a `Language` implementation to [scripts/languages.py](scripts/languages.py)
 and a `rules/<from>_to_<to>.md` guide; the rest of the ladder is language-neutral.
+
+## Author
+
+Leonardo Capossio — [bard0 design](https://www.bard0.com) — hello@bard0.com
 
 ## License
 

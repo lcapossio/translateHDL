@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (C) 2026 Leonardo Capossio - bard0 design
+// Author: Leonardo Capossio - bard0 design - hello@bard0.com
 // Equivalent "translation" of counter_gold.v, written in a different style
 // (explicit next-state two-process form). Behaviorally identical: reset still
 // dominates enable. Should PASS every parity layer.
