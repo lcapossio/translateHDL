@@ -90,5 +90,19 @@ def test_orchestrator_rejects_broken_fixture():
     assert r.returncode == 1, f"expected FAIL exit 1, got {r.returncode}\n{r.stdout}\n{r.stderr}"
 
 
+def _parity(*extra):
+    import subprocess
+    return subprocess.run([sys.executable, str(ROOT / "scripts" / "parity.py"), *extra],
+                          capture_output=True, text=True).returncode
+
+
+def test_expect_flag_matches_and_mismatches():
+    # --expect asserts the verdict: exit 0 on match, 1 on mismatch. Use L3a only
+    # so the result is deterministic with just Icarus present.
+    assert _parity(BAD, "--only", "L3a", "--expect", "fail") == 0
+    assert _parity(BAD, "--only", "L3a", "--expect", "pass") == 1
+    assert _parity(GOOD, "--only", "L3a", "--expect", "pass") == 0
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([str(Path(__file__)), "-v"]))

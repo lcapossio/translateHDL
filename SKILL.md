@@ -94,7 +94,9 @@ Run verdicts and exit codes:
 | INCOMPLETE | 77 | no divergence, but a layer was SKIPped (missing tool) |
 
 `--strict` turns **BOUNDED and SKIP into FAIL** — use it in CI, which demands a
-full proof with the full toolchain.
+full proof with the full toolchain. `--expect pass|fail|bounded|incomplete`
+asserts a specific verdict (exit 0 on match, 1 otherwise) — use it in CI for a
+module that is *expected* to be BOUNDED, without shell exit-code juggling.
 
 ## Assumptions & environment (a SEC PASS is only as good as these)
 

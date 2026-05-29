@@ -57,15 +57,24 @@ def _run_layer(fn, manifest_path: str, name: str) -> LayerResult:
 def main() -> int:
     args = sys.argv[1:]
     if not args:
-        print("usage: python scripts/parity.py <manifest.yml> [--only L0,L2] [--strict]",
-              file=sys.stderr)
+        print("usage: python scripts/parity.py <manifest.yml> [--only L0,L2] [--strict] "
+              "[--expect pass|fail|bounded|incomplete]", file=sys.stderr)
         return 2
     manifest_path = args[0]
     strict = "--strict" in args
     only = None
-    for a in args:
+    expect = None
+    for i, a in enumerate(args):
         if a.startswith("--only"):
-            only = set((a.split("=", 1)[1] if "=" in a else args[args.index(a) + 1]).split(","))
+            only = set((a.split("=", 1)[1] if "=" in a else args[i + 1]).split(","))
+        elif a == "--expect":
+            expect = args[i + 1].lower()
+        elif a.startswith("--expect="):
+            expect = a.split("=", 1)[1].lower()
+    valid = {"pass", "fail", "bounded", "incomplete"}
+    if expect is not None and expect not in valid:
+        print(f"--expect must be one of {sorted(valid)}", file=sys.stderr)
+        return 2
 
     results: list[tuple[str, LayerResult]] = []
     for tag, name, fn in LAYERS:
@@ -90,28 +99,32 @@ def main() -> int:
     if formal is not None and formal.rollup() == PASS and any(s == PASS for _, s, _ in formal.items):
         print("\n  Layer 2 formally proved the listed modules equivalent.")
 
+    # Natural verdict (independent of --strict / --expect).
     if any_fail:
-        print("\nRESULT: FAIL - a divergence was found. Translation is NOT equivalent.")
+        verdict, msg = "fail", "a divergence was found. Translation is NOT equivalent."
+    elif any_bounded:
+        verdict, msg = "bounded", ("no divergence found and bounded-equivalent, but a module "
+                                   "is not fully proven (see L2 detail). Stronger engine needed.")
+    elif any_skip:
+        verdict, msg = "incomplete", ("no divergence found, but some layers were skipped "
+                                      "(missing tools). Run in CI for a full proof.")
+    else:
+        verdict, msg = "pass", "all executed parity layers agree; proven modules are equivalent."
+    print(f"\nRESULT: {verdict.upper()} - {msg}")
+
+    # --expect: assert the verdict (lets CI demand e.g. a BOUNDED module without
+    # shell exit-code logic). Takes precedence over --strict.
+    if expect is not None:
+        ok = verdict == expect
+        print(f"EXPECT {expect.upper()}: {'OK' if ok else 'MISMATCH (got ' + verdict.upper() + ')'}")
+        return EXIT[PASS] if ok else EXIT[FAIL]
+
+    # --strict turns BOUNDED / INCOMPLETE into failures.
+    if strict and verdict in ("bounded", "incomplete"):
+        print("RESULT: FAIL (--strict) - not a full proof.")
         return EXIT[FAIL]
-    if any_bounded:
-        if strict:
-            print("\nRESULT: FAIL (--strict) - equivalence is only bounded-proven, "
-                  "not fully proven. Use a stronger engine (eqy) to close it.")
-            return EXIT[FAIL]
-        print("\nRESULT: BOUNDED - no divergence found and bounded-equivalent, but a "
-              "module is not fully proven (see L2 detail). Stronger engine needed for full proof.")
-        return EXIT[BOUNDED]
-    if any_skip:
-        if strict:
-            print("\nRESULT: FAIL (--strict) - a layer was skipped (missing tool); "
-                  "proof incomplete.")
-            return EXIT[FAIL]
-        print("\nRESULT: INCOMPLETE - no divergence found, but some layers were skipped "
-              "(missing tools). Install the toolchain or run in CI for a full proof.")
-        return EXIT[SKIP]
-    print("\nRESULT: PASS - all executed parity layers agree; "
-          "formally-proven modules are equivalent.")
-    return EXIT[PASS]
+    return {"fail": EXIT[FAIL], "bounded": EXIT[BOUNDED],
+            "incomplete": EXIT[SKIP], "pass": EXIT[PASS]}[verdict]
 
 
 if __name__ == "__main__":

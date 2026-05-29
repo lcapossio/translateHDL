@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive   # fetch external/spacewire_light for the examples
 
       - uses: actions/setup-python@v5
         with:
@@ -38,3 +40,9 @@ jobs:
 
       - name: Prove cross-language fixture (strict)
         run: python scripts/parity.py tests/fixtures/counter/parity_xlang.yml --strict
+
+      - name: Prove real spacewire_light syncdff (strict; fully formally proven)
+        run: python scripts/parity.py examples/syncdff/parity.yml --strict
+
+      - name: Check real spacewire_light spwlink (record-port wrapper; expect BOUNDED)
+        run: python scripts/parity.py examples/spwlink/parity.yml --expect bounded
