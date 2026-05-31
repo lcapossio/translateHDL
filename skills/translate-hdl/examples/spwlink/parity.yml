@@ -14,14 +14,14 @@ golden:
   std: "08"
   top: spwlink
   sources:
-    - ../../external/spacewire_light/rtl/vhdl/spwpkg.vhd
-    - ../../external/spacewire_light/rtl/vhdl/spwlink.vhd
+    - ../../../../external/spacewire_light/rtl/vhdl/spwpkg.vhd
+    - ../../../../external/spacewire_light/rtl/vhdl/spwlink.vhd
 
 candidate:
   language: verilog
   top: spwlink
   sources:
-    - ../../external/spacewire_light/rtl/verilog/spwlink.v
+    - ../../../../external/spacewire_light/rtl/verilog/spwlink.v
 
 interface:
   top: spwlink

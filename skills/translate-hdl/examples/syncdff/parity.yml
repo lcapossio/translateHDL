@@ -14,12 +14,12 @@ golden:
   language: vhdl
   std: "08"
   top: syncdff
-  sources: [../../external/spacewire_light/rtl/vhdl/syncdff.vhd]
+  sources: [../../../../external/spacewire_light/rtl/vhdl/syncdff.vhd]
 
 candidate:
   language: verilog
   top: syncdff
-  sources: [../../external/spacewire_light/rtl/verilog/syncdff.v]
+  sources: [../../../../external/spacewire_light/rtl/verilog/syncdff.v]
 
 interface:
   top: syncdff

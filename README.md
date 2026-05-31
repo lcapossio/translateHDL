@@ -67,7 +67,8 @@ proof on top of the simulation checks.
 ## Quickstart
 
 ```sh
-# 1. translate your module following rules/  (see skills/translate-hdl/SKILL.md workflow)
+cd skills/translate-hdl                   # the self-contained skill bundle
+# 1. translate your module following rules/  (see SKILL.md workflow)
 # 2. describe the comparison in a manifest (copy templates/parity_manifest.yml)
 # 3. run the ladder:
 python scripts/parity.py path/to/parity.yml --strict
@@ -91,25 +92,34 @@ Verdict exit codes: `0` PASS · `1` FAIL (divergence) · `77` BOUNDED
 `equiv_induct` proof is unbounded, not a sample. **L2 BOUNDED** means induction
 didn't close but no counterexample was found within `bounded_depth` cycles
 (strong evidence, not a full proof — usually an encoding/reachability limit, see
-[examples/spwlink](examples/spwlink/parity.yml)). The other layers are the safety
+[skills/translate-hdl/examples/spwlink](skills/translate-hdl/examples/spwlink/parity.yml)). The other layers are the safety
 net and the only evidence for code formal can't reach (testbenches,
 non-synthesizable constructs). Missing tools yield SKIP, never a false PASS;
 `--strict` makes BOUNDED and SKIP failures (use it in CI).
 
 ## Repository layout
 
+The **`skills/translate-hdl/`** directory is the self-contained, portable skill
+bundle — everything needed to run the skill lives inside it. The repo root only
+adds plugin/marketplace manifests, CI, license, README, and the spacewire_light
+submodule used by the examples.
+
 ```
-.claude-plugin/          plugin + marketplace manifests
-skills/translate-hdl/    skill entry (SKILL.md + workflow)
-rules/                   faithful-translation guides + pitfalls
-scripts/                 the parity ladder (parity.py orchestrates)
-  parity.py  iface_check.py  lint.py  formal_equiv.py
-  compare_traces.py  compare_waveforms.py  synth_compare.py
-  manifest.py  languages.py  _common.py
-templates/               manifest, eqy config, CI workflow templates
-tests/                   pytest self-tests + counter fixture (good/bad/xlang)
-examples/                worked example against spacewire_light
-.github/workflows/       this repo's own parity CI
+.claude-plugin/                 plugin + marketplace manifests
+.github/workflows/              this repo's parity CI
+external/spacewire_light/       submodule used by the worked examples
+LICENSE  README.md
+skills/translate-hdl/           the skill bundle (portable):
+  SKILL.md                        skill entry + workflow
+  requirements.txt                python deps (pyyaml, pytest, ruff)
+  rules/                          faithful-translation guides + pitfalls
+  scripts/                        the parity ladder (parity.py orchestrates)
+    parity.py iface_check.py lint.py formal_equiv.py
+    compare_traces.py compare_waveforms.py synth_compare.py
+    manifest.py languages.py _common.py
+  templates/                      manifest, eqy config, CI workflow templates
+  tests/                          pytest self-tests + counter fixture
+  examples/                       worked examples (against spacewire_light)
 ```
 
 ## Self-tests
@@ -117,6 +127,7 @@ examples/                worked example against spacewire_light
 From a clean checkout (Python 3.12+):
 
 ```sh
+cd skills/translate-hdl
 pip install -r requirements.txt
 pytest tests/            # proves the harness PASSes equivalent designs
                          # and FAILs a deliberately broken one
@@ -133,7 +144,7 @@ harness actually detects divergence instead of rubber-stamping.
 GHDL · Icarus Verilog · Yosys · (optional) eqy + SMT solver. All bundled in the
 [OSS CAD Suite](https://github.com/YosysHQ/oss-cad-suite-build) for Linux and
 Windows. A simulator-only machine still runs L0/L1(Verilog)/L3; the formal proof
-runs in CI ([templates/parity_ci.yml](templates/parity_ci.yml)) or after
+runs in CI ([skills/translate-hdl/templates/parity_ci.yml](skills/translate-hdl/templates/parity_ci.yml)) or after
 installing the suite.
 
 ## Worked example: spacewire_light
@@ -144,17 +155,17 @@ spacewire_light is included as a submodule under `external/` — fetch it with:
 git submodule update --init
 ```
 
-Real-module results (see [examples/](examples/README.md)):
-- **`syncdff`** — fully **formally proven** VHDL ≡ Verilog ([examples/syncdff](examples/syncdff/parity.yml)).
+Real-module results (see [skills/translate-hdl/examples/](skills/translate-hdl/examples/README.md)):
+- **`syncdff`** — fully **formally proven** VHDL ≡ Verilog ([examples/syncdff](skills/translate-hdl/examples/syncdff/parity.yml)).
 - **`spwlink`** — record ports proven via a golden-side wrapper; induction proves
   42/49 cells, a 40-cycle bounded miter finds no counterexample → **BOUNDED**
-  ([examples/spwlink](examples/spwlink/parity.yml)).
+  ([examples/spwlink](skills/translate-hdl/examples/spwlink/parity.yml)).
 - **`spwstream_trace`** — deterministic trace + normalized VCD waveform parity
-  ([examples/spwstream_trace](examples/spwstream_trace/parity.yml)).
+  ([examples/spwstream_trace](skills/translate-hdl/examples/spwstream_trace/parity.yml)).
 
 ## Extending to other languages
 
-Add a `Language` implementation to [scripts/languages.py](scripts/languages.py)
+Add a `Language` implementation to [skills/translate-hdl/scripts/languages.py](skills/translate-hdl/scripts/languages.py)
 and a `rules/<from>_to_<to>.md` guide; the rest of the ladder is language-neutral.
 
 ## Author
