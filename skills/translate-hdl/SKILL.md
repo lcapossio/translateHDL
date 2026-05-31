@@ -1,6 +1,6 @@
 ---
 name: translate-hdl
-description: Translate RTL between hardware description languages (VHDL <-> Verilog-2001, extensible to more) AND prove the translation is equivalent to the original. Use whenever the user asks to translate / port / convert / rewrite an HDL design from one language to another - e.g. "translate this VHDL to Verilog", "port this Verilog module to VHDL", "convert the core to Verilog", "rewrite this entity in Verilog" - or to verify/prove that an existing translation matches the original ("check parity", "prove these are equivalent", "is my Verilog port correct"). Produces a faithful, human-readable translation and runs a layered parity ladder whose centerpiece is formal sequential equivalence checking (Yosys/eqy).
+description: Translate RTL between hardware description languages (VHDL to/from Verilog-2001, extensible to more) AND prove the translation is equivalent to the original. Use whenever the user asks to translate / port / convert / rewrite an HDL design from one language to another - e.g. "translate this VHDL to Verilog", "port this Verilog module to VHDL", "convert the core to Verilog", "rewrite this entity in Verilog" - or to verify/prove that an existing translation matches the original ("check parity", "prove these are equivalent", "is my Verilog port correct"). Produces a faithful, human-readable translation and runs a layered parity ladder whose centerpiece is formal sequential equivalence checking (Yosys/eqy).
 ---
 
 # translateHDL
@@ -168,5 +168,6 @@ delays and file I/O are covered by simulation parity only.
 
 Layer 2 is decided by parsing Yosys output (not exit code), because
 `yowasp-yosys` does not reliably propagate a non-zero exit on assert failure;
-Layers 1 and 4 use the same output-based check. See [README.md](../../../README.md) for
-the worked spacewire_light examples (syncdff proven, spwlink bounded).
+Layers 1 and 4 use the same output-based check. See [examples/README.md](examples/README.md)
+and the example manifests under [examples/](examples/) for worked cases such as
+syncdff proven and spwlink bounded.

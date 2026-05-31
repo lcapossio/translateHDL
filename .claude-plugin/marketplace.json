@@ -9,7 +9,7 @@
     {
       "name": "translate-hdl",
       "source": "./",
-      "description": "VHDL <-> Verilog translation with formal-SEC parity proofs.",
+      "description": "VHDL to/from Verilog translation with formal-SEC parity proofs.",
       "category": "hardware",
       "homepage": "https://github.com/lcapossio/translateHDL"
     }
