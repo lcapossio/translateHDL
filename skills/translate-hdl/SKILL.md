@@ -13,7 +13,7 @@ not an afterthought.
 
 1. **Authors a faithful translation.** You (the model) write readable RTL in the
    target language, preserving structure and state so the proof can close. The
-   rules live in [rules/](rules/). Auto-translators (`sv2v`, `ghdl --synth`, etc.)
+   rules live in [rules/](../../rules/). Auto-translators (`sv2v`, `ghdl --synth`, etc.)
    may be used as *scaffolding or a reference* for large ports, but the **shipped
    RTL must be human-readable, human-reviewed, and proof-clean** — never commit
    raw machine output. External tools' main role here is to *check*, not produce.
@@ -33,15 +33,15 @@ Triggers: *"translate/port/convert this VHDL to Verilog"* (or the reverse),
    language. Note anything intentionally out of scope (e.g. vendor/IP-dependent
    files - spacewire_light leaves its AMBA/GRLIB files untranslated).
 2. **Read the source RTL** and the matching rule guide:
-   [rules/vhdl_to_verilog.md](rules/vhdl_to_verilog.md) or
-   [rules/verilog_to_vhdl.md](rules/verilog_to_vhdl.md), plus
-   [rules/pitfalls.md](rules/pitfalls.md). For record ports read
-   [rules/interface_contract.md](rules/interface_contract.md).
+   [rules/vhdl_to_verilog.md](../../rules/vhdl_to_verilog.md) or
+   [rules/verilog_to_vhdl.md](../../rules/verilog_to_vhdl.md), plus
+   [rules/pitfalls.md](../../rules/pitfalls.md). For record ports read
+   [rules/interface_contract.md](../../rules/interface_contract.md).
 3. **Translate faithfully.** Mirror the two-process pattern, preserve widths,
    reset kind, FSM encoding, and port names where possible. Faithfulness is what
    keeps Layer 2 push-button.
 4. **Write a parity manifest** from
-   [templates/parity_manifest.yml](templates/parity_manifest.yml): the two sides'
+   [templates/parity_manifest.yml](../../templates/parity_manifest.yml): the two sides'
    sources/tops, the modules+param sets to prove, and matched deterministic
    benches for trace/waveform comparison.
 5. **State the proof's assumptions & environment** (see the section below) before
@@ -142,11 +142,11 @@ Needs GHDL (VHDL), Icarus Verilog (Verilog sim), Yosys (lint + formal + synth),
 and optionally eqy + a SMT solver (large-module SEC). All ship together in the
 **OSS CAD Suite** (Linux + Windows). Locally on a sim-only box you still get
 L0/L1(verilog)/L3 results; the formal proof runs in CI (see
-[templates/parity_ci.yml](templates/parity_ci.yml)) or after installing the suite.
+[templates/parity_ci.yml](../../templates/parity_ci.yml)) or after installing the suite.
 
 ## Extending to more languages
 
-Add one `Language` to [scripts/languages.py](scripts/languages.py) (its lint /
+Add one `Language` to [scripts/languages.py](../../scripts/languages.py) (its lint /
 simulate / Yosys-ingest commands) and a `rules/<from>_to_<to>.md` guide. The
 ladder scripts are language-neutral - they go through the registry and the
 manifest's per-side `language:` fields.
@@ -159,10 +159,10 @@ FSMs and differing state encodings may not close under `equiv_induct` — set
 closure may then need a stronger engine (`eqy` is wired up but **experimental and
 untested** — validate before relying on it). Record-flattened interfaces need a
 wrapper — see the concrete recipe in
-[rules/interface_contract.md](rules/interface_contract.md). Testbench behavior,
+[rules/interface_contract.md](../../rules/interface_contract.md). Testbench behavior,
 delays and file I/O are covered by simulation parity only.
 
 Layer 2 is decided by parsing Yosys output (not exit code), because
 `yowasp-yosys` does not reliably propagate a non-zero exit on assert failure;
-Layers 1 and 4 use the same output-based check. See [README.md](README.md) for
+Layers 1 and 4 use the same output-based check. See [README.md](../../README.md) for
 the worked spacewire_light examples (syncdff proven, spwlink bounded).

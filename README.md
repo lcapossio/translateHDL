@@ -10,10 +10,11 @@ checking** (Yosys / eqy). A translation that can't be proven equivalent isn't
 done.
 
 This repo is both a standalone toolset and a Claude Code skill (see
-[SKILL.md](SKILL.md)).
+[skills/translate-hdl/SKILL.md](skills/translate-hdl/SKILL.md)).
 
 ## Index
 
+- [Install (Claude Code plugin)](#install-claude-code-plugin)
 - [Why](#why)
 - [Quickstart](#quickstart)
 - [Features](#features)
@@ -25,6 +26,21 @@ This repo is both a standalone toolset and a Claude Code skill (see
 - [Extending to other languages](#extending-to-other-languages)
 - [Author](#author)
 - [License](#license)
+
+## Install (Claude Code plugin)
+
+This repo is also a Claude Code **plugin** (`.claude-plugin/plugin.json`) and a
+single-plugin **marketplace** (`.claude-plugin/marketplace.json`). To install
+into Claude Code from this repo:
+
+```sh
+/plugin marketplace add lcapossio/translateHDL
+/plugin install translate-hdl@translatehdl
+```
+
+Once it lands in Anthropic's official directory it will also be installable as
+`translate-hdl@claude-plugins-official`. Either way, the skill entry point is
+[skills/translate-hdl/SKILL.md](skills/translate-hdl/SKILL.md).
 
 ## Features
 
@@ -51,7 +67,7 @@ proof on top of the simulation checks.
 ## Quickstart
 
 ```sh
-# 1. translate your module following rules/  (see SKILL.md workflow)
+# 1. translate your module following rules/  (see skills/translate-hdl/SKILL.md workflow)
 # 2. describe the comparison in a manifest (copy templates/parity_manifest.yml)
 # 3. run the ladder:
 python scripts/parity.py path/to/parity.yml --strict
@@ -83,7 +99,8 @@ non-synthesizable constructs). Missing tools yield SKIP, never a false PASS;
 ## Repository layout
 
 ```
-SKILL.md                 skill entry + workflow
+.claude-plugin/          plugin + marketplace manifests
+skills/translate-hdl/    skill entry (SKILL.md + workflow)
 rules/                   faithful-translation guides + pitfalls
 scripts/                 the parity ladder (parity.py orchestrates)
   parity.py  iface_check.py  lint.py  formal_equiv.py

@@ -1,0 +1,17 @@
+{
+  "name": "translatehdl",
+  "description": "translateHDL: parity-proven RTL translation skill (single-plugin marketplace).",
+  "owner": {
+    "name": "Leonardo Capossio - bard0 design",
+    "email": "hello@bard0.com"
+  },
+  "plugins": [
+    {
+      "name": "translate-hdl",
+      "source": "./",
+      "description": "VHDL <-> Verilog translation with formal-SEC parity proofs.",
+      "category": "hardware",
+      "homepage": "https://github.com/lcapossio/translateHDL"
+    }
+  ]
+}
