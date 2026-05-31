@@ -1,7 +1,7 @@
 {
   "name": "translate-hdl",
   "description": "Translate RTL between hardware description languages (VHDL to/from Verilog-2001, extensible to more) and prove the translation equivalent via a 5-layer parity ladder whose centerpiece is formal sequential equivalence (Yosys).",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "author": {
     "name": "Leonardo Capossio",
     "email": "hello@bard0.com"

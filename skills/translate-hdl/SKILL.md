@@ -111,6 +111,6 @@ FSMs and differing encodings may not close under `equiv_induct` — set
 interfaces need a wrapper — see [rules/interface_contract.md](rules/interface_contract.md).
 The `eqy` engine is wired up but **experimental and untested**. L2 is decided by
 parsing Yosys output (not exit code) because `yowasp-yosys` does not reliably
-propagate non-zero exit; L1 and L4 use the same check. Tooling install + the
-worked spacewire_light examples (syncdff proven, spwlink bounded) are in
-[../../../README.md](../../../README.md).
+propagate non-zero exit; L1 and L4 use the same check. Tooling install notes and
+worked cases such as syncdff proven and spwlink bounded are in
+[examples/README.md](examples/README.md) and the manifests under [examples/](examples/).
