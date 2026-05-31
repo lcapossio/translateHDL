@@ -79,7 +79,11 @@ Run in order by `scripts/parity.py`; each is also a standalone script.
   typically a proof limitation (unreachable states / differing FSM encoding).
   Close it with a stronger engine (`eqy`) or by aligning state encodings.
 - **FAIL** = a real divergence: a formal counterexample, or an interface / lint /
-  trace / waveform mismatch.
+  trace / waveform mismatch. When L2 fails, the verdict detail includes a
+  concrete **counterexample**: the cycle of first divergence and the input
+  vectors at cycles 1..N (e.g. `counterexample at cycle 3: in_en=[0,1,1],
+  in_rst=[0,0,1]`). Directly actionable — re-simulate with that stimulus to
+  locate the bug.
 - **SKIP** = a required tool is absent — never a false PASS.
 - L0/L1/L3/L4 are the safety net and the **only** evidence for code formal can't
   reach (testbenches, non-synthesizable constructs, multi-language sim behavior).

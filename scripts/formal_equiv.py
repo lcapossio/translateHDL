@@ -100,7 +100,8 @@ def _bounded_miter_script(gold_cmds: list[str], gate_cmds: list[str], gold_top: 
     # Bounded equivalence: prove no input sequence makes the designs differ within
     # `depth` cycles of reset. Not a full proof, but it tells "proof limitation"
     # (induction can't close, but no divergence exists) apart from a real bug
-    # (a concrete counterexample trace).
+    # (a concrete counterexample trace). -show-inputs/-show-public expose the
+    # per-cycle stimulus + the `trigger` wire so a counterexample is parseable.
     return "\n".join([
         *_side_prep(gold_cmds, gold_top, "gold"),
         *_side_prep(gate_cmds, gate_top, "gate"),
@@ -108,8 +109,55 @@ def _bounded_miter_script(gold_cmds: list[str], gate_cmds: list[str], gold_top: 
         "miter -equiv -make_assert -flatten gold gate miter",
         "hierarchy -top miter",
         "opt -full",
-        f"sat -seq {depth} -prove-asserts",
+        f"sat -seq {depth} -prove-asserts -show-inputs -show-public",
     ]) + "\n"
+
+
+# Default depth for the automatic counterexample probe when the manifest does
+# not set formal.bounded_depth. Small + fast; long enough to catch shallow bugs.
+_CE_PROBE_DEPTH = 20
+
+
+def _extract_ce(out: str) -> dict | None:
+    """Extract a counterexample trace from `sat -prove-asserts` output, or None.
+
+    Yosys prints a per-cycle table (cycle, escaped-name, ..., value) followed by
+    "SAT proof finished - model found: FAIL!" when a divergence exists. We
+    locate the first cycle where the miter's `\\trigger` wire is 1 and return
+    the input (`\\in_*`) stimulus up to and including that cycle.
+    """
+    if "model found" not in out or "FAIL" not in out:
+        return None
+    cycles: dict[int, dict[str, str]] = {}
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) >= 5 and parts[0].isdigit() and parts[1].startswith("\\"):
+            cyc = int(parts[0])
+            sig = parts[1].lstrip("\\")
+            val = parts[-1]
+            cycles.setdefault(cyc, {})[sig] = val
+    if not cycles:
+        return None
+    div = next((c for c in sorted(cycles) if cycles[c].get("trigger") == "1"), None)
+    if div is None:
+        return None
+    trace = []
+    for c in sorted(cycles):
+        if c > div:
+            break
+        inputs = {k: v for k, v in cycles[c].items() if k.startswith("in_")}
+        trace.append((c, inputs))
+    return {"cycle": div, "trace": trace}
+
+
+def _format_ce(ce: dict) -> str:
+    # Compact one-line summary: per-input vector across cycles 1..div.
+    by_sig: dict[str, list[str]] = {}
+    for _, inputs in ce["trace"]:
+        for k, v in inputs.items():
+            by_sig.setdefault(k, []).append(v)
+    cols = ", ".join(f"{k}=[{','.join(vs)}]" for k, vs in sorted(by_sig.items()))
+    return f"counterexample at cycle {ce['cycle']}: {cols}"
 
 
 def _prove_yosys(root: Path, man: dict, gold_top: str, gate_top: str,
@@ -131,20 +179,26 @@ def _prove_yosys(root: Path, man: dict, gold_top: str, gate_top: str,
         tail = next((ln for ln in reversed(out.splitlines()) if "ERROR" in ln), "")
         return FAIL, f"equivalence not established — {tail}"
 
-    # Induction did not close. A bounded miter check tells a real bug (a
-    # counterexample within `bounded_depth` cycles) apart from a proof limitation
-    # (no divergence up to that depth; full closure needs a stronger engine).
-    if bounded_depth > 0:
-        bscript = _bounded_miter_script(gold, gate, gold_top, gate_top, bounded_depth)
-        _, bout = run_output([tool("yosys"), "-"], root, input_text=bscript)
-        if "no model found" in bout:
+    # Induction did not close. Always run a bounded miter to either dig out a
+    # concrete counterexample (real bug, actionable) or attest bounded equivalence
+    # up to a depth (proof limitation, BOUNDED). Probe depth defaults to a small
+    # value when the manifest does not set bounded_depth, so the verdict carries
+    # actionable info without extra configuration.
+    probe_depth = bounded_depth if bounded_depth > 0 else _CE_PROBE_DEPTH
+    bscript = _bounded_miter_script(gold, gate, gold_top, gate_top, probe_depth)
+    _, bout = run_output([tool("yosys"), "-"], root, input_text=bscript)
+    ce = _extract_ce(bout)
+    if ce is not None:
+        return FAIL, f"{n} unproven $equiv cell(s); {_format_ce(ce)}"
+    if "no model found" in bout:
+        if bounded_depth > 0:
             return BOUNDED, (f"{n} cell(s) not inductively closed, but bounded-equivalent "
                              f"for {bounded_depth} cycles from reset (no counterexample); "
-                             f"full proof needs engine: eqy")
-        if "model found" in bout or "FAIL" in bout:
-            return FAIL, f"bounded miter found a counterexample within {bounded_depth} cycles — designs differ"
-        return FAIL, f"equiv_status: {n} unproven and bounded check inconclusive"
-    return FAIL, f"equiv_status: {n} unproven $equiv cell(s) — designs differ (set formal.bounded_depth to triage)"
+                             f"full proof needs a stronger engine")
+        return FAIL, (f"{n} unproven $equiv cell(s); no shallow counterexample within "
+                      f"{probe_depth} cycles (likely a proof limitation, not a bug). "
+                      f"Set formal.bounded_depth to claim BOUNDED.")
+    return FAIL, f"equiv_status: {n} unproven and bounded check inconclusive"
 
 
 def _prove_eqy(root: Path, man: dict, module: str, params: dict, tmp: Path) -> tuple[str, str]:
