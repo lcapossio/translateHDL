@@ -35,6 +35,25 @@ jobs:
       - name: Install OSS CAD Suite (yosys, ghdl, eqy, sby, iverilog)
         uses: YosysHQ/setup-oss-cad-suite@v3
 
+      # Cocotb's VPI loads libpython at simulation time. OSS CAD Suite's
+      # iverilog/ghdl are RPATH-linked to OSS CAD Suite's bundled libm.so.6
+      # (older), so loading the SYSTEM libpython3.12 (built against modern
+      # glibc) silently fails with `GLIBC_2.38 not found` and produces zero
+      # TRACE lines. Install cocotb into OSS CAD Suite's bundled Python 3.11
+      # (matching libm/RPATH) and pin _cocotb_run.py to that interpreter via
+      # the COCOTB_PYTHON env var.
+      - name: Install cocotb into OSS CAD Suite Python (ABI-matched VPI)
+        run: |
+          # Derive OSS CAD Suite root from `which ghdl` (the setup action puts
+          # <root>/bin on PATH but the install location varies across runners,
+          # so don't hard-code $GITHUB_WORKSPACE/oss-cad-suite).
+          OCS_DIR=$(dirname "$(dirname "$(command -v ghdl)")")
+          OCS_PY="$OCS_DIR/py3bin/python3"
+          test -x "$OCS_PY" || { echo "py3bin/python3 missing in $OCS_DIR"; ls "$OCS_DIR/" || true; exit 1; }
+          "$OCS_PY" -m pip install --quiet cocotb cocotb-tools
+          "$OCS_PY" -c 'import cocotb_tools.runner, cocotb; print("cocotb", cocotb.__version__)'
+          echo "COCOTB_PYTHON=$OCS_PY" >> "$GITHUB_ENV"
+
       - name: Harness self-tests (includes the broken-fixture negative test)
         run: pytest tests/ -v
 
@@ -43,6 +62,9 @@ jobs:
 
       - name: Prove cross-language fixture (strict)
         run: python scripts/parity.py tests/fixtures/counter/parity_xlang.yml --strict
+
+      - name: Prove cross-language fixture via cocotb (one Python TB, both sims)
+        run: python scripts/parity.py tests/fixtures/counter/parity_cocotb.yml --strict
 
       - name: Prove real spacewire_light syncdff (strict; fully formally proven)
         run: python scripts/parity.py examples/syncdff/parity.yml --strict

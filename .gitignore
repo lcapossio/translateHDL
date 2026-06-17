@@ -11,8 +11,21 @@ _vhdl_netlist_*.v
 _*.ys
 *.log
 .wavecmp_tmp/
+.cocotb_trace_tmp/
+sim_build/
 .formal_*/
 .synthcmp_*/
 .spw_synth_*/
 *.eqy.dir/
 eqy_*/
+
+# GHDL/Icarus build droppings landing in fixture/example dirs
+*.o
+e~*.o
+*.fst
+*.ghw
+*.vvp
+*.cf
+# the unsuffixed elaborated binary GHDL leaves next to sources
+skills/translate-hdl/tests/fixtures/counter/counter_trace_tb
+skills/translate-hdl/examples/*/[a-z]*_tb

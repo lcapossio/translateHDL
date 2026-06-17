@@ -60,10 +60,20 @@ formal:
 simulation:
   trace:                     # 3a: exact match of marker lines from matched benches
     marker: "TRACE "
+    # OPTION A (default, native): mirrored VHDL+Verilog benches. Need both
+    # benches to emit byte-identical TRACE lines under identical stimulus -
+    # the testbenches/stimulus-isomorphism check below is your safety net.
+    #
+    # OPTION B (recommended for nontrivial cores): one cocotb (Python) bench
+    # drives BOTH sims; stimulus is identical by construction.
+    # Uncomment the next line (and drop bench files from each side's sources)
+    # to use it. Requires pip install cocotb cocotb-tools, plus GHDL with VHPI
+    # (OSS CAD Suite ships this) and Icarus.
+    # cocotb_bench: bench/mymod_cocotb.py
     golden:
       language: vhdl
       std: "08"
-      top: mymod_trace_tb
+      top: mymod_trace_tb     # for cocotb: set top: mymod (the DUT, no _tb)
       sources: [rtl/mymod.vhd, bench/mymod_trace_tb.vhd]
     candidate:
       language: verilog
@@ -71,6 +81,8 @@ simulation:
       sources: [bench/mymod_trace_tb.v, rtl/mymod.v]
   waveform:                  # 3b: normalized VCD compare of top-level observables
     start_ps: 25000          # ignore power-on settling before this time
+    # Same cocotb_bench option applies here (a single .py drives both VCDs):
+    # cocotb_bench: bench/mymod_cocotb.py
     golden:
       language: vhdl
       std: "08"

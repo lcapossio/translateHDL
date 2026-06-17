@@ -35,7 +35,10 @@ Triggers: *"translate/port/convert this VHDL to Verilog"* (or the reverse),
 3. **Translate faithfully** — mirror the two-process pattern; preserve widths,
    reset kind, FSM encoding, port names. Faithfulness keeps L2 push-button.
 4. **Write a parity manifest** from
-   [templates/parity_manifest.yml](templates/parity_manifest.yml).
+   [templates/parity_manifest.yml](templates/parity_manifest.yml). *Optional:*
+   set `simulation.{trace,waveform}.cocotb_bench:` to a single Python testbench
+   so one cocotb bench drives both sides (stimulus identical by construction);
+   otherwise write mirrored native VHDL + Verilog benches.
 5. **State assumptions** (see below). A SEC PASS is only meaningful relative to
    its assumptions.
 6. **Run the ladder**:

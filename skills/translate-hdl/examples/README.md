@@ -37,6 +37,21 @@ designs are *bounded-equivalent* and the gap is a proof limitation, not a bug.
 Verdict: **BOUNDED**. Full unbounded closure needs a reachability-aware engine
 (`formal.engine: eqy`).
 
+## Single-bench (cocotb) option
+
+For L3 (trace + waveform), the manifest can specify
+`simulation.trace.cocotb_bench: path/to/tb.py` (and the same under `waveform:`)
+to drive **both sides with one Python testbench** through cocotb (GHDL for VHDL,
+Icarus for Verilog). Stimulus is identical by construction — eliminates the
+mirrored-bench drift the `stimulus_markers` substring check can only weakly
+catch. See [../tests/fixtures/counter/parity_cocotb.yml](../tests/fixtures/counter/parity_cocotb.yml)
++ [counter_cocotb.py](../tests/fixtures/counter/counter_cocotb.py) for a
+working cross-language example.
+
+**Tooling:** `pip install cocotb cocotb-tools`, plus GHDL with VHPI (OSS CAD
+Suite ships this) and Icarus. Layer 2 (formal SEC) is unchanged by this
+option — it never uses testbenches.
+
 ## spwstream_trace — simulation parity
 [spwstream_trace/parity.yml](spwstream_trace/parity.yml). Reproduces
 spacewire_light's deterministic trace + normalized-VCD waveform parity through

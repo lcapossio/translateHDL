@@ -53,6 +53,8 @@ Once it lands in Anthropic's official directory it will also be installable as
   (bounded-equivalent, proof limitation) / INCOMPLETE (tool missing). Decided by
   parsing tool *output*, not exit codes.
 - **Record-port support** via a golden-side wrapper (proven on spwlink).
+- **Optional cocotb driver**: one Python testbench drives BOTH sims (GHDL + Icarus)
+  for L3 — stimulus identical by construction (kills mirrored-bench drift).
 - **Tool-skip aware** (exit `77`), `--strict` for CI, manifest-driven, OS-agnostic.
 - **GitHub Actions CI** running the full ladder on OSS CAD Suite.
 

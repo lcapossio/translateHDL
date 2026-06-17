@@ -43,6 +43,18 @@ def validate(man: dict, root: Path) -> list[tuple[str, str, str]]:
             issues.append((f"{side} sources", PASS, f"{len(man[side]['sources'])} files"))
         except FileNotFoundError as exc:
             issues.append((f"{side} sources", FAIL, str(exc)))
+    # cocotb_bench is optional; if set under simulation.{trace,waveform}, the
+    # referenced .py must exist. Drives both sides identically by construction
+    # (no testbench-isomorphism check needed because there is only one bench).
+    for sect in ("trace", "waveform"):
+        bench = ((man.get("simulation") or {}).get(sect) or {}).get("cocotb_bench")
+        if bench:
+            p = (root / bench).resolve()
+            tag = f"simulation.{sect}.cocotb_bench"
+            if p.exists():
+                issues.append((tag, PASS, str(p.name)))
+            else:
+                issues.append((tag, FAIL, f"file not found: {p}"))
     return issues
 
 

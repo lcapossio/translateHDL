@@ -22,13 +22,24 @@ manifest:
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 from _common import (FAIL, PASS, LayerResult, ToolMissing, cli_main,
                      load_manifest, manifest_root, resolve_sources)
 import languages
+
+_HERE = Path(__file__).resolve().parent
+_COCOTB_RUNNER = _HERE / "_cocotb_run.py"
+
+
+def _cocotb_interp() -> str:
+    # See compare_traces._cocotb_interp for the rationale (libpython/libm ABI).
+    return os.environ.get("COCOTB_PYTHON") or sys.executable
 
 
 def timescale_to_ps(text: str) -> float:
@@ -135,11 +146,34 @@ def value_at(changes: list[tuple[int, str]], t: int) -> str:
     return value
 
 
-def _build(root: Path, side: dict, vcd: Path) -> None:
-    lang = languages.get(side["language"])
+def _build(root: Path, side: dict, vcd: Path,
+           cocotb_bench: Path | None = None, build_dir: Path | None = None,
+           side_label: str = "") -> None:
+    if cocotb_bench is not None:
+        lang = side["language"]
+        sim = "ghdl" if lang == "vhdl" else "icarus"
+        std = str(side.get("std", "08" if lang == "vhdl" else "2001"))
+        sources = [str(p) for p in resolve_sources(root, side["sources"])]
+        build_dir.mkdir(parents=True, exist_ok=True)
+        cmd = [
+            _cocotb_interp(), str(_COCOTB_RUNNER),
+            "--sim", sim, "--lang", lang, "--top", side["top"],
+            "--bench", str(cocotb_bench), "--std", std,
+            "--build-dir", str(build_dir),
+            "--vcd", str(vcd),
+            "--sources", *sources,
+        ]
+        print("+ " + " ".join(cmd), flush=True)
+        proc = subprocess.run(cmd, cwd=str(root))
+        if proc.returncode == 77:
+            raise ToolMissing("cocotb")
+        if proc.returncode != 0:
+            raise RuntimeError(f"cocotb {side_label} side exited {proc.returncode}")
+        return
+    lang_obj = languages.get(side["language"])
     sources = resolve_sources(root, side["sources"])
     std = str(side.get("std", "08" if side["language"] == "vhdl" else "2001"))
-    lang.simulate_vcd(root, side["top"], sources, vcd, std=std)
+    lang_obj.simulate_vcd(root, side["top"], sources, vcd, std=std)
 
 
 def compare(manifest_path: str) -> LayerResult:
@@ -155,14 +189,24 @@ def compare(manifest_path: str) -> LayerResult:
     signals: dict[str, list[str]] = spec["signals"]
     start_ps = int(spec.get("start_ps", 0))
 
+    cocotb_bench: Path | None = None
+    if spec.get("cocotb_bench"):
+        cocotb_bench = (root / spec["cocotb_bench"]).resolve()
+        if not cocotb_bench.exists():
+            raise FileNotFoundError(f"cocotb_bench not found: {cocotb_bench}")
+
     tmp = root / ".wavecmp_tmp"
     shutil.rmtree(tmp, ignore_errors=True)
     tmp.mkdir(exist_ok=True)
     try:
         gvcd, cvcd = tmp / "golden.vcd", tmp / "candidate.vcd"
         try:
-            _build(root, spec["golden"], gvcd)
-            _build(root, spec["candidate"], cvcd)
+            _build(root, spec["golden"], gvcd, cocotb_bench=cocotb_bench,
+                   build_dir=(tmp / "cocotb_golden") if cocotb_bench else None,
+                   side_label="golden")
+            _build(root, spec["candidate"], cvcd, cocotb_bench=cocotb_bench,
+                   build_dir=(tmp / "cocotb_candidate") if cocotb_bench else None,
+                   side_label="candidate")
         except ToolMissing:
             raise
 

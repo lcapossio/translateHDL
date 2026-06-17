@@ -34,6 +34,7 @@ import parity  # noqa: E402
 FIX = ROOT / "tests" / "fixtures" / "counter"
 GOOD = str(FIX / "parity_good.yml")
 BAD = str(FIX / "parity_bad.yml")
+COCOTB = str(FIX / "parity_cocotb.yml")
 
 
 def _status(result):
@@ -94,6 +95,16 @@ def _parity(*extra):
     import subprocess
     return subprocess.run([sys.executable, str(ROOT / "scripts" / "parity.py"), *extra],
                           capture_output=True, text=True).returncode
+
+
+def test_cocotb_manifest_valid():
+    # Schema-validate the cocotb fixture even if cocotb itself isn't installed.
+    # The end-to-end cocotb run is exercised by the CI orchestrator step
+    # (parity.py parity_cocotb.yml --strict) rather than here - pytest in a
+    # mixed-toolchain environment runs into platform-specific GHDL/cocotb
+    # quirks (e.g. mcode VHPI on Windows) that don't surface in the
+    # orchestrator path on a Linux full-toolchain runner.
+    assert _status(manifest_mod.run(COCOTB)) == PASS
 
 
 def test_expect_flag_matches_and_mismatches():
