@@ -58,6 +58,7 @@ from __future__ import annotations
 import json
 import subprocess
 import tempfile
+from functools import lru_cache
 from pathlib import Path
 
 import languages
@@ -172,10 +173,12 @@ def _verdict(out: str, mode: str, depth: int) -> tuple[str, str]:
 
 
 def _check_module(root: Path, script: str, mode: str, depth: int, timeout: float,
-                  stat_json: Path, expect: int) -> tuple[str, str]:
+                  stat_json: Path, expect: int,
+                  yosys_args: tuple[str, ...] = ()) -> tuple[str, str]:
     """Run one property check and gate the verdict on property ingestion."""
     try:
-        _, out = run_output([tool("yosys"), "-"], root, input_text=script, timeout=timeout)
+        _, out = run_output([tool("yosys"), *yosys_args, "-"], root,
+                            input_text=script, timeout=timeout)
     except subprocess.TimeoutExpired:
         return SKIP, (f"inconclusive: solver exceeded {timeout:g}s. A true property that is "
                       f"not k-inductive never closes - strengthen it, or use mode: bmc")
@@ -203,15 +206,29 @@ def _check_module(root: Path, script: str, mode: str, depth: int, timeout: float
     return status, f"{detail} [{found}/{expect} assert cell(s) verified present]"
 
 
-def _has_ghdl_plugin(root: Path) -> bool:
-    """True when this Yosys build can actually elaborate VHDL.
+@lru_cache(maxsize=None)
+def _ghdl_yosys_args(root: Path) -> tuple[str, ...] | None:
+    """Yosys arguments that yield a working `ghdl` command, or None.
 
-    `help ghdl` is not enough: builds exist where the command is registered but
-    execution reports that Yosys was built without GHDL support. Run it and
-    look for that refusal.
+    Two shapes exist in the wild and the difference is invisible until you run
+    it. In some builds the GHDL frontend is compiled in, so plain `yosys` has a
+    `ghdl` command. In others - OSS CAD Suite among them - it ships as a
+    loadable module that must be requested with `-m ghdl`, and plain `yosys`
+    answers "No such command: ghdl" exactly as if the plugin were absent.
+
+    Probe both and return whichever works, so a present-but-unloaded plugin is
+    used rather than reported missing. Running `ghdl --help` (not `help ghdl`)
+    matters too: builds exist that register the command and then refuse at
+    execution because Yosys was built without GHDL support. Cached - a process
+    spawn per side is wasteful and the answer cannot change mid-run.
     """
-    _, out = run_output([tool("yosys"), "-p", "ghdl --help"], root)
-    return "No such command" not in out and "not built with" not in out.lower()
+    for args in ((), ("-m", "ghdl")):
+        _, out = run_output([tool("yosys"), *args, "-p", "ghdl --help"], root)
+        low = out.lower()
+        if ("no such command" not in low and "not built with" not in low
+                and "can't load module" not in low and "error" not in low):
+            return args
+    return None
 
 
 def _expect_asserts(spec: dict, mod: dict, side: str) -> int:
@@ -221,22 +238,24 @@ def _expect_asserts(spec: dict, mod: dict, side: str) -> int:
     return int(val)
 
 
-def _side_ready(side_spec: dict, root: Path) -> str:
-    """'' when this side can be checked, else the reason it must be SKIPped.
+def _side_ready(side_spec: dict, root: Path) -> tuple[str, tuple[str, ...]]:
+    """(reason to SKIP, extra yosys args). An empty reason means "can check".
 
     Checked per side, not up front: a missing VHDL toolchain must not suppress
     the Verilog side, because per-side evidence is the whole point of L2b.
     """
     if side_spec["language"].lower() != "vhdl":
-        return ""
+        return "", ()
     if not have("ghdl"):
-        return "ghdl not installed (needed to read VHDL/PSL)"
-    if not _has_ghdl_plugin(root):
-        # Yosys without ghdl-yosys-plugin cannot read VHDL *with* its PSL; the
-        # netlist bridge used by Layer 2 silently drops properties, so SKIP
-        # rather than "prove" an assertion-free design.
-        return "yosys has no working `ghdl` command (ghdl-yosys-plugin missing)"
-    return ""
+        return "ghdl not installed (needed to read VHDL/PSL)", ()
+    args = _ghdl_yosys_args(root)
+    if args is None:
+        # Yosys without a working ghdl frontend cannot read VHDL *with* its
+        # PSL; the netlist bridge used by Layer 2 silently drops properties, so
+        # SKIP rather than "prove" an assertion-free design.
+        return ("yosys has no working `ghdl` command - tried built-in and `-m ghdl`; "
+                "install ghdl-yosys-plugin (bundled with the OSS CAD Suite)"), ()
+    return "", args
 
 
 def check(manifest_path: str) -> LayerResult:
@@ -285,7 +304,7 @@ def check(manifest_path: str) -> LayerResult:
                 std = str(side_spec.get("std", "08" if side_spec["language"] == "vhdl"
                                         else "2001"))
                 expect = _expect_asserts(spec, mod, side)
-                reason = _side_ready(side_spec, root)
+                reason, yosys_args = _side_ready(side_spec, root)
                 for i, params in enumerate(param_sets):
                     tag = f"{name}[{side}" + (
                         "," + ",".join(f"{k}={v}" for k, v in params.items())
@@ -299,7 +318,7 @@ def check(manifest_path: str) -> LayerResult:
                     script = "\n".join([*_prep(cmds, top, stat_json),
                                         _sat_cmd(mode, depth)]) + "\n"
                     status, detail = _check_module(root, script, mode, depth, timeout,
-                                                   stat_json, expect)
+                                                   stat_json, expect, yosys_args)
                     res.add(tag, status, detail)
 
     res.status = res.rollup()
