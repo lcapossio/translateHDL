@@ -184,9 +184,13 @@ def _check_module(root: Path, script: str, mode: str, depth: int, timeout: float
                       f"not k-inductive never closes - strengthen it, or use mode: bmc")
 
     if "ERROR" in out and "SUCCESS!" not in out and "FAIL!" not in out:
-        # Report a read/elaborate error as such; it must never be mistaken for
-        # "this design has no properties".
         tail = next((ln for ln in reversed(out.splitlines()) if "ERROR" in ln), "")
+        if any(marker in tail.lower() for marker in _GHDL_UNSUPPORTED):
+            # The command exists but this build refuses to elaborate VHDL. That
+            # is a missing capability, not a broken design: SKIP, never FAIL.
+            return SKIP, f"yosys cannot elaborate VHDL in this build: {tail.strip()}"
+        # Any other read/elaborate error is reported as such; it must never be
+        # mistaken for "this design has no properties".
         return FAIL, f"yosys error: {tail.strip()}"
 
     # --- vacuity gate: did the properties we declared actually get in? -------
@@ -206,27 +210,39 @@ def _check_module(root: Path, script: str, mode: str, depth: int, timeout: float
     return status, f"{detail} [{found}/{expect} assert cell(s) verified present]"
 
 
+# Yosys messages that mean "this build cannot elaborate VHDL", as opposed to
+# anything else the frontend might print. Matched case-insensitively.
+_NO_GHDL = ("no such command", "can't load module", "cannot load module")
+# ...and the message from a build that registers the command but refuses to run
+# it. Seen only at execution time, so it is handled where the run happens.
+_GHDL_UNSUPPORTED = ("not built with", "ghdl support")
+
+
 @lru_cache(maxsize=None)
 def _ghdl_yosys_args(root: Path) -> tuple[str, ...] | None:
-    """Yosys arguments that yield a working `ghdl` command, or None.
+    """Yosys arguments that expose a `ghdl` command, or None if there is none.
 
-    Two shapes exist in the wild and the difference is invisible until you run
-    it. In some builds the GHDL frontend is compiled in, so plain `yosys` has a
-    `ghdl` command. In others - OSS CAD Suite among them - it ships as a
-    loadable module that must be requested with `-m ghdl`, and plain `yosys`
-    answers "No such command: ghdl" exactly as if the plugin were absent.
+    Two build shapes exist and the difference is invisible until you run it.
+    Some builds compile the GHDL frontend in, so plain `yosys` has a `ghdl`
+    command; others - the OSS CAD Suite among them - ship it as a loadable
+    module that must be requested with `-m ghdl`, and plain `yosys` then answers
+    "No such command: ghdl" exactly as if the plugin were absent. Probe both, so
+    a present-but-unloaded plugin is used rather than reported missing.
 
-    Probe both and return whichever works, so a present-but-unloaded plugin is
-    used rather than reported missing. Running `ghdl --help` (not `help ghdl`)
-    matters too: builds exist that register the command and then refuse at
-    execution because Yosys was built without GHDL support. Cached - a process
-    spawn per side is wasteful and the answer cannot change mid-run.
+    Deliberately asks `help ghdl` (does the command exist?) and matches only the
+    two messages that mean "no VHDL frontend here". An earlier version ran
+    `ghdl --help` and rejected any output containing "error", which a working
+    frontend's own help text can legitimately contain - that false negative
+    SKIPped the VHDL side on a suite that had the plugin all along. A build that
+    registers the command and then refuses at execution is caught by
+    _GHDL_UNSUPPORTED during the real run.
+
+    Cached: a process spawn per side is wasteful and the answer cannot change
+    mid-run.
     """
     for args in ((), ("-m", "ghdl")):
-        _, out = run_output([tool("yosys"), *args, "-p", "ghdl --help"], root)
-        low = out.lower()
-        if ("no such command" not in low and "not built with" not in low
-                and "can't load module" not in low and "error" not in low):
+        _, out = run_output([tool("yosys"), *args, "-p", "help ghdl"], root)
+        if not any(marker in out.lower() for marker in _NO_GHDL):
             return args
     return None
 
