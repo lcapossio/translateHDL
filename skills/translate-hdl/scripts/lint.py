@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2026 Leonardo Capossio - bard0 design
+# Author: Leonardo Capossio - bard0 design - hello@bard0.com
+"""Layer 1 — lint both designs clean.
+
+Generalized from spacewire_light's scripts/lint_hdl.py. Each side is analyzed /
+elaborated with its native toolchain; for Verilog an optional Yosys structural
+pass (``hierarchy -check; proc; check -assert``) catches issues iverilog misses,
+such as multi-driven nets. Missing tools yield SKIP, never a false PASS.
+"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import languages
+from _common import (
+    FAIL,
+    PASS,
+    SKIP,
+    LayerResult,
+    ToolMissing,
+    cli_main,
+    have,
+    load_manifest,
+    manifest_root,
+    resolve_sources,
+    run_output,
+    tool,
+)
+
+
+def _yosys_check(root: Path, top: str, sources: list[str], params: dict | None) -> tuple[bool, str]:
+    # Decide on OUTPUT, not exit code: yowasp-yosys exits 0 even when
+    # `check -assert` reports problems (e.g. multiple conflicting drivers), so an
+    # exit-code-only check could pass a structurally broken design. `check`
+    # prints "Found and reported N problems."; we parse N.
+    # as_posix: yosys reads a backslash as an escape, so a Windows path must be
+    # forward-slashed before it reaches read_verilog.
+    cmds = ["read_verilog " + " ".join(Path(s).as_posix() for s in sources)]
+    chparam = "".join(f" -chparam {k} {int(v)}" for k, v in (params or {}).items())
+    cmds += [f"hierarchy -check -top {top}{chparam}", "proc", "check"]
+    _, out = run_output([tool("yosys"), "-"], root, input_text="\n".join(cmds) + "\n")
+    m = re.search(r"Found and reported (\d+) problems", out)
+    if m:
+        n = int(m.group(1))
+        return (n == 0), ("" if n == 0 else f"{n} structural problem(s) (e.g. multi-driver)")
+    tail = next((ln.strip() for ln in reversed(out.splitlines()) if "ERROR" in ln), "")
+    return False, f"yosys check did not complete{(' — ' + tail) if tail else ''}"
+
+
+def _lint_side(root: Path, side: dict, res: LayerResult, label: str) -> None:
+    lang = languages.get(side["language"])
+    sources = resolve_sources(root, side["sources"])
+    std = str(side.get("std", "08" if side["language"] == "vhdl" else "2001"))
+    try:
+        lang.lint(root, sources, std=std)
+        res.add(f"{label}:{side['language']} analyze", PASS)
+    except ToolMissing as exc:
+        res.add(f"{label}:{side['language']} analyze", SKIP, str(exc))
+        return
+
+    if side["language"] == "verilog":
+        if have("yosys"):
+            try:
+                ok, detail = _yosys_check(root, side["top"], sources, side.get("params"))
+                res.add(f"{label}: yosys structural check", PASS if ok else FAIL, detail)
+            except Exception as exc:  # noqa: BLE001 - report any structural failure
+                res.add(f"{label}: yosys structural check", FAIL, str(exc))
+        else:
+            res.add(f"{label}: yosys structural check", SKIP, "yosys not installed")
+
+
+def lint(manifest_path: str) -> LayerResult:
+    man = load_manifest(manifest_path)
+    root = manifest_root(manifest_path)
+    res = LayerResult("L1 lint", PASS)
+    _lint_side(root, man["golden"], res, "golden")
+    _lint_side(root, man["candidate"], res, "candidate")
+    res.status = res.rollup()
+    return res
+
+
+if __name__ == "__main__":
+    cli_main(lint)

@@ -1,0 +1,83 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Leonardo Capossio - bard0 design
+# Author: Leonardo Capossio - bard0 design - hello@bard0.com
+# Full parity ladder for the translateHDL self-tests. OSS CAD Suite provides
+# iverilog, ghdl, ghdl-yosys-plugin, yosys, eqy and sby, so Layer 2 formal SEC
+# runs here. --strict makes a skipped/bounded layer a hard failure.
+
+name: parity
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: skills/translate-hdl   # the self-contained skill bundle
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive   # fetch external/spacewire_light for the examples
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      - name: Lint (ruff)
+        run: ruff check scripts tests
+
+      - name: Install OSS CAD Suite (yosys, ghdl, eqy, sby, iverilog)
+        uses: YosysHQ/setup-oss-cad-suite@v3
+
+      # Cocotb's VPI loads libpython at simulation time. OSS CAD Suite's
+      # iverilog/ghdl are RPATH-linked to OSS CAD Suite's bundled libm.so.6
+      # (older), so loading the SYSTEM libpython3.12 (built against modern
+      # glibc) silently fails with `GLIBC_2.38 not found` and produces zero
+      # TRACE lines. Install cocotb into OSS CAD Suite's bundled Python 3.11
+      # (matching libm/RPATH) and pin _cocotb_run.py to that interpreter via
+      # the COCOTB_PYTHON env var.
+      - name: Install cocotb into OSS CAD Suite Python (ABI-matched VPI)
+        run: |
+          # Derive OSS CAD Suite root from `which ghdl` (the setup action puts
+          # <root>/bin on PATH but the install location varies across runners,
+          # so don't hard-code $GITHUB_WORKSPACE/oss-cad-suite).
+          OCS_DIR=$(dirname "$(dirname "$(command -v ghdl)")")
+          OCS_PY="$OCS_DIR/py3bin/python3"
+          test -x "$OCS_PY" || { echo "py3bin/python3 missing in $OCS_DIR"; ls "$OCS_DIR/" || true; exit 1; }
+          "$OCS_PY" -m pip install --quiet cocotb cocotb-tools
+          "$OCS_PY" -c 'import cocotb_tools.runner, cocotb; print("cocotb", cocotb.__version__)'
+          echo "COCOTB_PYTHON=$OCS_PY" >> "$GITHUB_ENV"
+
+      - name: Harness self-tests (includes the broken-fixture negative test)
+        run: pytest tests/ -v
+
+      - name: Prove same-language fixture (strict)
+        run: python scripts/parity.py tests/fixtures/counter/parity_good.yml --strict
+
+      - name: Prove cross-language fixture (strict)
+        run: python scripts/parity.py tests/fixtures/counter/parity_xlang.yml --strict
+
+      # Layer 2b alone, called out so a property-side failure is attributable at
+      # a glance: PSL (VHDL golden, needs ghdl-yosys-plugin) and immediate SV
+      # asserts (Verilog candidate) proving the same three counter properties.
+      # --strict matters here: it turns a SKIPped side (missing plugin) or a
+      # bounded result into a hard failure, so a green run means both sides were
+      # really proved. Vacuity, schema and localization cases are covered by the
+      # pytest step above, which runs with the full toolchain present.
+      - name: Prove properties on both sides (L2b, PSL + SV asserts)
+        run: python scripts/parity.py tests/fixtures/counter/parity_xlang.yml --only L2b --strict
+
+      - name: Prove cross-language fixture via cocotb (one Python TB, both sims)
+        run: python scripts/parity.py tests/fixtures/counter/parity_cocotb.yml --strict
+
+      - name: Prove real spacewire_light syncdff (strict; fully formally proven)
+        run: python scripts/parity.py examples/syncdff/parity.yml --strict
+
+      - name: Check real spacewire_light spwlink (record-port wrapper; expect BOUNDED)
+        run: python scripts/parity.py examples/spwlink/parity.yml --expect bounded

@@ -1,0 +1,57 @@
+# SPDX-License-Identifier: MIT
+# translateHDL self-test: VHDL golden vs Verilog candidate driven by a SINGLE
+# cocotb Python testbench (no mirrored .vhd/.v benches). One bench -> stimulus
+# is identical by construction on both sides. Layer 2 formal SEC is unchanged
+# by this choice (it never uses testbenches).
+#
+# Requires: cocotb >= 1.8, GHDL with VHPI (OSS CAD Suite ships this), Icarus.
+# Without cocotb, L3a SKIPs and the run reports INCOMPLETE.
+version: 1
+name: counter_cocotb_parity
+description: cross-language counter, one cocotb bench drives both sides
+
+golden:
+  language: vhdl
+  std: "08"
+  top: counter
+  sources: [counter.vhd]
+
+candidate:
+  language: verilog
+  top: counter
+  sources: [counter_good.v]
+
+interface:
+  top: counter
+
+# Formal SEC is untouched by the cocotb option - testbenches don't enter L2.
+formal:
+  enabled: true
+  engine: yosys
+  induct_depth: 8
+  modules:
+    - name: counter
+      param_sets:
+        - {WIDTH: 8}
+
+simulation:
+  trace:
+    marker: "TRACE "
+    # cocotb_bench routes BOTH sides through scripts/_cocotb_run.py: ghdl for
+    # the vhdl side, icarus for the verilog side. The bench is one Python file.
+    cocotb_bench: counter_cocotb.py
+    golden:
+      language: vhdl
+      std: "08"
+      top: counter
+      sources: [counter.vhd]
+    candidate:
+      language: verilog
+      top: counter
+      sources: [counter_good.v]
+
+synth:
+  enabled: true
+  tolerance_pct: 10.0
+  param_sets:
+    - {WIDTH: 8}

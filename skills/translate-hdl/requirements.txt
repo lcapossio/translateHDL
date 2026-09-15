@@ -1,0 +1,8 @@
+# translateHDL Python dependencies (HDL tools come from PATH / OSS CAD Suite).
+pyyaml>=6.0
+pytest>=8.0
+# Pinned to a minor: ruff's IMPLICIT default rule set widens between releases
+# (0.16 enabled I/RUF/FURB/PL rules that 0.5 did not), which turns CI red with
+# no repo change. ruff.toml names the enabled rules explicitly; this pin keeps
+# the resolver from stepping outside what that file was written against.
+ruff>=0.16,<0.17

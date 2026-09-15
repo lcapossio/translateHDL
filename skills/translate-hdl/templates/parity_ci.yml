@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Leonardo Capossio - bard0 design
+# Author: Leonardo Capossio - bard0 design - hello@bard0.com
+# translateHDL parity CI TEMPLATE. Copy to .github/workflows/parity.yml.
+# OSS CAD Suite bundles iverilog, ghdl, ghdl-yosys-plugin, yosys, eqy and sby,
+# so the WHOLE ladder (incl. Layer 2 formal SEC) runs here. --strict turns a
+# skipped/bounded layer into a failure, so a missing tool can't weaken the proof.
+
+name: parity
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      # Pin ruff in requirements.txt and keep a ruff.toml that names the
+      # enabled rules: ruff's implicit default set widens between releases, so
+      # an unpinned lint gate goes red on its own with no source change.
+      - name: Lint (ruff)
+        run: ruff check scripts tests
+
+      - name: Install OSS CAD Suite (yosys, ghdl, eqy, sby, iverilog)
+        uses: YosysHQ/setup-oss-cad-suite@v3
+
+      - name: Harness self-tests (the broken-fixture negative test lives here)
+        run: pytest tests/ -v
+
+      - name: Prove your design (strict = full proof required)
+        run: python scripts/parity.py path/to/parity.yml --strict

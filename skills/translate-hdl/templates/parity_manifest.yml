@@ -1,0 +1,163 @@
+# SPDX-License-Identifier: MIT
+# translateHDL parity manifest TEMPLATE.
+# Copy next to your sources; paths are resolved relative to THIS file.
+# Run:  python /path/to/translateHDL/scripts/parity.py this_manifest.yml --strict
+#
+# Sections are optional except `golden` and `candidate`. Omit a layer's section
+# to skip that layer (e.g. no `formal:` -> Layer 2 not run).
+
+version: 1
+name: mydesign_parity
+description: one-line summary of what is being compared
+
+# ---- the two designs ---------------------------------------------------------
+golden:                      # the original / reference implementation
+  language: vhdl             # vhdl | verilog
+  std: "08"                  # vhdl std (93/08) or verilog gen (2001); optional
+  top: mymod                 # entity/module name used for elaboration & SEC
+  sources:
+    - rtl/mymod.vhd
+
+candidate:                   # the translation under test
+  language: verilog
+  top: mymod
+  sources:
+    - rtl/mymod.v
+
+# ---- Layer 0: interface check ------------------------------------------------
+interface:
+  top: mymod
+  # Only needed when port names differ across the two sides (e.g. VHDL records
+  # flattened in Verilog). golden_name: candidate_name
+  # port_map:
+  #   "busi.valid": busi_valid
+
+# ---- Layer 2: formal sequential equivalence checking (the primary proof) -----
+formal:
+  enabled: true              # false (or omitting the section) -> the layer reports
+                             # N/A, never PASS: a proof you switched off is not a
+                             # proof. The run then says "NO formal proof ran".
+  engine: yosys              # yosys (built-in equiv_induct); eqy = experimental/untested
+  induct_depth: 20           # equiv_induct -seq depth
+  bounded_depth: 0           # >0: if induction can't close, run an N-cycle miter
+                             #     check -> BOUNDED (proof limitation) vs FAIL (real bug)
+  modules:
+    - name: mymod
+      # Prove every configuration that is actually used (same params both sides):
+      param_sets:
+        - {}                 # default params
+        # - {WIDTH: 16, MODE: 1}
+
+    # Record-flattened interface? Use a wrapper in the GOLDEN side's language
+    # (see rules/interface_contract.md). Example:
+    # - name: mymod
+    #   golden_top: mymod_flat        # synth the wrapper, not the record-port entity
+    #   candidate_top: mymod
+    #   wrapper: mymod_flat.vhd       # VHDL wrapper for a VHDL golden (NOT .v)
+    #   configs:                      # per-side params (e.g. VHDL generic vs Verilog param)
+    #     - golden: {reset_time: 640}
+    #       candidate: {RESET_TIME: 640}
+
+# ---- Layer 2b: property verification (OPTIONAL; omit the section to skip) -----
+# Proves stated properties about EACH SIDE on its own. This is a CONTRACT claim,
+# not an equivalence claim: it never replaces Layer 2, and the orchestrator keeps
+# it out of the equivalence verdict. Worth adding when L2 only reaches BOUNDED,
+# when the two sides differ in state encoding, or when you want a failure
+# localized to one side (SEC says "they differ"; L2b says "the candidate broke
+# property 2").
+#
+# Properties are written in each side's own language and attached with a small
+# harness module that wraps the unmodified DUT (Yosys has no SystemVerilog
+# `bind` outside Verific), then pointed at via <side>_top:
+#   VHDL    -> PSL in comments, read via ghdl-yosys-plugin (-fpsl)
+#   Verilog -> immediate `assert` / $past, read via `read_verilog -sv -formal`
+#              (native Yosys supports a SUBSET of SV assertions, not full
+#              concurrent SVA - that needs Verific)
+# See tests/fixtures/counter/counter_props.{sv,vhd} for a worked harness pair.
+# Cross-language use means TWO harnesses; nothing proves they state the same
+# contract, so keep them side by side and review them together.
+#
+# expect_asserts is REQUIRED and load-bearing. The real hazard here is proving
+# NOTHING and reporting success - an unread property file, PSL outside GHDL's
+# subset, a <side>_top with no properties under it. A solver proves an empty
+# conjunction happily. The layer counts $assert cells in the prepared design and
+# FAILs on any mismatch, so state the number you expect.
+#
+# properties:
+#   enabled: true
+#   engine: yosys            # yosys built-in `sat` (the only engine in this version)
+#   mode: prove              # prove = unbounded (sat -tempinduct) -> PASS
+#                            # bmc   = bounded to `depth`          -> BOUNDED
+#   depth: 20                # bmc depth
+#   timeout_s: 300           # per check; induction on a non-k-inductive property
+#                            # never closes, so a timeout is SKIP (inconclusive)
+#   single_clock: true       # REQUIRED attestation. `sat` advances one global
+#                            # time step and async2sync carries its own timing
+#                            # assumption, so multi-clock / dual-edge / async
+#                            # designs are out of scope and would risk a false PASS.
+#   sides: [golden, candidate]   # default: both. A property that passes on one
+#                                # side and fails on the other localizes the bug.
+#   modules:
+#     - name: mymod
+#       expect_asserts: 3                         # assert cells each side must contribute
+#       golden_props: [props/mymod_props.vhd]     # omit if assertions are inline in the RTL
+#       golden_top: mymod_props                   # harness module (default: `name`)
+#       candidate_props: [props/mymod_props.sv]
+#       candidate_top: mymod_props
+#       # candidate_expect_asserts: 4             # per-side override, if they differ
+#       param_sets:
+#         - {}
+#         # - {WIDTH: 16}
+
+# ---- Layer 3: simulation parity (covers what formal can't) -------------------
+simulation:
+  trace:                     # 3a: exact match of marker lines from matched benches
+    marker: "TRACE "
+    # OPTION A (default, native): mirrored VHDL+Verilog benches. Need both
+    # benches to emit byte-identical TRACE lines under identical stimulus -
+    # the testbenches/stimulus-isomorphism check below is your safety net.
+    #
+    # OPTION B (recommended for nontrivial cores): one cocotb (Python) bench
+    # drives BOTH sims; stimulus is identical by construction.
+    # Uncomment the next line (and drop bench files from each side's sources)
+    # to use it. Requires pip install cocotb cocotb-tools, plus GHDL with VHPI
+    # (OSS CAD Suite ships this) and Icarus.
+    # cocotb_bench: bench/mymod_cocotb.py
+    golden:
+      language: vhdl
+      std: "08"
+      top: mymod_trace_tb     # for cocotb: set top: mymod (the DUT, no _tb)
+      sources: [rtl/mymod.vhd, bench/mymod_trace_tb.vhd]
+    candidate:
+      language: verilog
+      top: mymod_trace_tb
+      sources: [bench/mymod_trace_tb.v, rtl/mymod.v]
+  waveform:                  # 3b: normalized VCD compare of top-level observables
+    start_ps: 25000          # ignore power-on settling before this time
+    # Same cocotb_bench option applies here (a single .py drives both VCDs):
+    # cocotb_bench: bench/mymod_cocotb.py
+    golden:
+      language: vhdl
+      std: "08"
+      top: mymod_trace_tb
+      sources: [rtl/mymod.vhd, bench/mymod_trace_tb.vhd]
+    candidate:
+      language: verilog
+      top: mymod_trace_tb
+      sources: [bench/mymod_trace_tb.v, rtl/mymod.v]
+    signals:                 # logical name: [golden_vcd_path, candidate_vcd_path]
+      clk:  ["mymod_trace_tb.clk", "mymod_trace_tb.clk"]
+      dout: ["mymod_trace_tb.dout", "mymod_trace_tb.dout"]
+  testbenches:               # optional: enforce stimulus-isomorphism of benches
+    - name: mymod_tb
+      class: stimulus-isomorphic
+      stimulus: ["Test 1: reset", "Test 2: overflow"]   # markers required on both
+      golden: {sources: [bench/mymod_tb.vhd]}
+      candidate: {sources: [bench/mymod_tb.v]}
+
+# ---- Layer 4: synthesis resource sanity (not a proof) ------------------------
+synth:
+  enabled: true
+  tolerance_pct: 5.0
+  param_sets:
+    - {}
