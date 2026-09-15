@@ -207,8 +207,12 @@ class Vhdl(Language):
         # Availability of that plugin is the caller's check (see properties.py).
         require("ghdl", "yosys")
         files = " ".join(yosys_path(s) for s in [*sources, *(props or [])])
+        # Generic overrides are plain options and must precede the source files:
+        # everything after `-e` is read as a unit name. This mirrors the option
+        # order of the `ghdl --synth` call in netlist() above, which is the one
+        # shape proven to work against the pinned toolchain.
         gen = "".join(f" -g{k}={int(v)}" for k, v in (params or {}).items())
-        return [f"ghdl --std={std} -fsynopsys -fpsl {files} -e{gen} {top}",
+        return [f"ghdl --std={std} -fsynopsys -fpsl{gen} {files} -e {top}",
                 f"hierarchy -check -top {top}"]
 
 

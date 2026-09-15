@@ -56,6 +56,7 @@ solver is SKIP and never PASS, and an ingestion mismatch is FAIL.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import tempfile
 from functools import lru_cache
@@ -153,10 +154,38 @@ def _ce_summary(out: str) -> str:
     return f"counterexample over {max(cycles)} cycle(s): {cols}"
 
 
+_DIAG_RE = re.compile(r"^\s*\S+:\d+:\d+:")
+
+
+def _error_report(out: str, limit: int = 6) -> str:
+    """Summarize a failed Yosys run.
+
+    Yosys' own final line is usually a bare summary ("vhdl import failed.")
+    while the diagnostics that say WHY come from the front end just above it.
+    Reporting only the last line throws away the whole reason, so collect the
+    ERROR line together with the source-located diagnostics preceding it.
+    """
+    lines = out.splitlines()
+    idx = next((i for i in range(len(lines) - 1, -1, -1) if "ERROR" in lines[i]), None)
+    if idx is None:
+        return ""
+    picked = [lines[idx].strip()]
+    for line in reversed(lines[max(0, idx - 40):idx]):
+        text = line.strip()
+        if not text:
+            continue
+        if _DIAG_RE.match(text) or "error:" in text.lower():
+            picked.insert(0, text)
+            if len(picked) > limit:
+                break
+        elif len(picked) > 1:
+            break   # diagnostics run contiguously; stop at the first unrelated line
+    return "; ".join(picked)
+
+
 def _verdict(out: str, mode: str, depth: int) -> tuple[str, str]:
     if "ERROR" in out:
-        tail = next((ln for ln in reversed(out.splitlines()) if "ERROR" in ln), "")
-        return FAIL, f"yosys error: {tail.strip()}"
+        return FAIL, f"yosys error: {_error_report(out)}"
     if "FAIL!" in out:
         return FAIL, f"property violated ({mode}); {_ce_summary(out)}"
     if "SUCCESS!" not in out:
@@ -184,14 +213,14 @@ def _check_module(root: Path, script: str, mode: str, depth: int, timeout: float
                       f"not k-inductive never closes - strengthen it, or use mode: bmc")
 
     if "ERROR" in out and "SUCCESS!" not in out and "FAIL!" not in out:
-        tail = next((ln for ln in reversed(out.splitlines()) if "ERROR" in ln), "")
-        if any(marker in tail.lower() for marker in _GHDL_UNSUPPORTED):
+        report = _error_report(out)
+        if any(marker in report.lower() for marker in _GHDL_UNSUPPORTED):
             # The command exists but this build refuses to elaborate VHDL. That
             # is a missing capability, not a broken design: SKIP, never FAIL.
-            return SKIP, f"yosys cannot elaborate VHDL in this build: {tail.strip()}"
+            return SKIP, f"yosys cannot elaborate VHDL in this build: {report}"
         # Any other read/elaborate error is reported as such; it must never be
         # mistaken for "this design has no properties".
-        return FAIL, f"yosys error: {tail.strip()}"
+        return FAIL, f"yosys error: {report}"
 
     # --- vacuity gate: did the properties we declared actually get in? -------
     found = _count_asserts(stat_json)
