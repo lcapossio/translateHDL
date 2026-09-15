@@ -71,7 +71,7 @@ jobs:
       # really proved. Vacuity, schema and localization cases are covered by the
       # pytest step above, which runs with the full toolchain present.
       - name: Prove properties on both sides (L2b, PSL + SV asserts)
-        run: python scripts/parity.py tests/fixtures/counter/parity_xlang.yml --only L2b --strict
+        run: python scripts/parity.py tests/fixtures/counter/parity_xlang.yml --only L2b --strict --expect incomplete
 
       - name: Prove cross-language fixture via cocotb (one Python TB, both sims)
         run: python scripts/parity.py tests/fixtures/counter/parity_cocotb.yml --strict

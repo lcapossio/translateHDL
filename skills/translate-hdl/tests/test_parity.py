@@ -292,6 +292,19 @@ def test_cocotb_manifest_valid():
     assert _status(manifest_mod.run(COCOTB)) == PASS
 
 
+def test_strict_evidence_gate_is_not_bypassed_by_expect():
+    # A property-only run is INCOMPLETE by construction, so `--expect incomplete`
+    # is the right assertion for it - but it must not become a way to accept an
+    # L2b that proved nothing. --strict's refusal of a SKIPped/BOUNDED property
+    # layer is evaluated BEFORE --expect, so the pair still fails without a
+    # working solver. Outcome depends on the toolchain present, so derive it.
+    out = _parity_out(GOOD, "--only", "L2b", "--expect", "incomplete")
+    assert "EXPECT INCOMPLETE: OK" in out
+    proved = "[L2b] PASS" in out
+    rc = _parity(GOOD, "--only", "L2b", "--expect", "incomplete", "--strict")
+    assert rc == (0 if proved else 1), out
+
+
 def test_expect_flag_matches_and_mismatches():
     # --expect asserts the verdict: exit 0 on match, 1 on mismatch. Use L3a only
     # so the result is deterministic with just Icarus present.

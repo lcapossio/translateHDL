@@ -57,7 +57,9 @@ Triggers: *"translate/port/convert this VHDL to Verilog"* (or the reverse),
 
 `--strict` turns BOUNDED and SKIP into FAIL (use in CI). `--expect
 pass|fail|bounded|incomplete` asserts a specific verdict; `--only L0,L2` runs a
-subset.
+subset. A property-only run (`--only L2b`) is INCOMPLETE by construction -
+assert it with `--expect incomplete --strict`, which still fails if L2b itself
+proved nothing.
 
 ## Before reporting
 

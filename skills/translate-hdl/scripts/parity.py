@@ -156,18 +156,22 @@ def main() -> int:
                                 "equivalence divergence.")
     print(f"\nRESULT: {verdict.upper()} - {msg}")
 
-    # --expect: assert the verdict (lets CI demand e.g. a BOUNDED module without
-    # shell exit-code logic). Takes precedence over --strict.
+    # --strict refuses a properties layer that was configured but could not run,
+    # or that produced only bounded evidence. This runs BEFORE --expect: the
+    # expected verdict of a property-only run is "incomplete" either way, so a
+    # later check would let `--expect incomplete` accept a layer that proved
+    # nothing - exactly the false pass this project exists to prevent.
+    if strict and props is not None and props.rollup() in (SKIP, BOUNDED):
+        print(f"RESULT: FAIL (--strict) - L2b {props.rollup()}: {props.detail}")
+        return EXIT[FAIL]
+
+    # --expect: assert the verdict (lets CI demand e.g. a BOUNDED module, or a
+    # deliberately property-only run, without shell exit-code logic). Takes
+    # precedence over --strict for the OVERALL verdict only.
     if expect is not None:
         ok = verdict == expect
         print(f"EXPECT {expect.upper()}: {'OK' if ok else 'MISMATCH (got ' + verdict.upper() + ')'}")
         return EXIT[PASS] if ok else EXIT[FAIL]
-
-    # --strict also refuses a properties layer that was configured but could
-    # not run, or that produced only bounded evidence.
-    if strict and props is not None and props.rollup() in (SKIP, BOUNDED):
-        print(f"RESULT: FAIL (--strict) - L2b {props.rollup()}: {props.detail}")
-        return EXIT[FAIL]
 
     # --strict turns BOUNDED / INCOMPLETE into failures.
     if strict and verdict in ("bounded", "incomplete"):

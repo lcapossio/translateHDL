@@ -57,6 +57,7 @@ When a proof is too expensive, reduce it honestly rather than hiding it:
 | Accept bounded evidence | set `formal.bounded_depth: N` | BOUNDED |
 | Cheaper induction | lower `induct_depth`, trim `param_sets` | PASS if it still closes |
 | Run a subset of layers | `parity.py m.yml --only L0,L1,L3a` | per layer |
+| Check contracts only | `parity.py m.yml --only L2b --expect incomplete --strict` | **INCOMPLETE** |
 | Defer the cost | sim layers locally, formal in CI with `--strict` | full proof in CI |
 | Skip the proof entirely | `formal: {enabled: false}` | **N/A** |
 
